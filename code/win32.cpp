@@ -65,7 +65,30 @@
 global b32 global_running;
 global b32 global_error;
 
-#if 0
+inline u64
+win32_get_last_write_time(char *Path)
+{
+    WIN32_FILE_ATTRIBUTE_DATA FileAttribs = {};
+    GetFileAttributesExA(Path, GetFileExInfoStandard, (void *)&FileAttribs);
+    FILETIME last_write_time = FileAttribs.ftLastWriteTime;
+
+    u64 result = file_time_to_u64(last_write_time);
+    return result;
+}
+
+struct Input_File
+{
+    char *path;
+    u8   *data;
+    u64   size;
+    u64   write_time;  // @todo: this should be useless in release build
+};
+
+#define PLATFORM_RELOAD_CHANGED_FILE(name) b32 name(Input_File *file)
+typedef PLATFORM_RELOAD_CHANGED_FILE(Platform_Reload_Changed_File);
+#define PLATFORM_READ_FILE(name) Input_File name(char *Path)
+typedef PLATFORM_READ_FILE(Platform_Read_File);
+
 internal
 PLATFORM_READ_FILE(win32_read_file)
 {
@@ -138,7 +161,6 @@ PLATFORM_RELOAD_CHANGED_FILE(win32_reload_file_if_changed)
 
     return(has_changed);
 }
-#endif
 
 LRESULT CALLBACK window_proc(
     HWND   window,
@@ -288,7 +310,19 @@ WinMain(
         context->OMSetRenderTargets(1, &render_target_rgb, 0);
 
         // ===========================================================
-        // rasterizer set-up
+        // Viewport set-up
+        // ===========================================================
+        D3D11_VIEWPORT viewport = {};
+        viewport.TopLeftX = 0;
+        viewport.TopLeftY = 0;
+        viewport.Width = WIDTH;
+        viewport.Height = HEIGHT;
+        viewport.MinDepth = 0.f;
+        viewport.MaxDepth = 1.f;
+        context->RSSetViewports(1, &viewport);
+
+        // ===========================================================
+        // Texture sampler set-up
         // ===========================================================
         ID3D11SamplerState *sampler;
         D3D11_SAMPLER_DESC sampler_desc = {};
@@ -303,6 +337,48 @@ WinMain(
         sampler_desc.MaxLOD = 100;
         device->CreateSamplerState(&sampler_desc, &sampler);
         context->PSSetSamplers(0, 1, &sampler);
+
+        // ===========================================================
+        // rasterizer set-up
+        // ===========================================================
+        D3D11_RASTERIZER_DESC raster_settings = {};
+        raster_settings.FillMode = D3D11_FILL_SOLID;
+        raster_settings.CullMode = D3D11_CULL_BACK;
+        raster_settings.FrontCounterClockwise = 1;
+        raster_settings.DepthBias = 0;
+        raster_settings.DepthBiasClamp = 0;
+        raster_settings.SlopeScaledDepthBias = 0;
+        raster_settings.DepthClipEnable = 1;
+        raster_settings.ScissorEnable = 0;
+        raster_settings.MultisampleEnable = 0;
+        raster_settings.AntialiasedLineEnable = 0;
+
+        ID3D11RasterizerState *raster_state = 0;
+        device->CreateRasterizerState(&raster_settings, &raster_state);
+        context->RSSetState(raster_state);
+
+        // ===========================================================
+        // Depth states
+        // ===========================================================
+        //D3D11_DEPTH_STENCIL_VIEW_DESC depth_view_desc = {DXGI_FORMAT_D32_FLOAT, D3D11_DSV_DIMENSION_TEXTURE2D};
+        //d11->device->CreateRenderTargetView(d11->backbuffer, 0, &d11->render_target_rgb);
+        //d11->device->CreateDepthStencilView(depth_texture, &depth_view_desc, &d11->render_target_depth);
+
+        ID3D11DepthStencilState *nodepth_nostencil_state = 0;
+        D3D11_DEPTH_STENCIL_DESC depth_stencil_settings;
+        //depth_stencil_settings.DepthEnable    = 1;
+        depth_stencil_settings.DepthEnable    = 0;
+        depth_stencil_settings.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+        //depth_stencil_settings.DepthFunc      = D3D11_COMPARISON_LESS;
+        depth_stencil_settings.DepthFunc      = D3D11_COMPARISON_ALWAYS;
+        depth_stencil_settings.StencilEnable  = 0;
+        depth_stencil_settings.StencilReadMask;
+        depth_stencil_settings.StencilWriteMask;
+        depth_stencil_settings.FrontFace      = {D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_COMPARISON_ALWAYS};
+        depth_stencil_settings.BackFace       = {D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_COMPARISON_ALWAYS};
+
+        //device->CreateDepthStencilState(&depth_stencil_settings, &d11->depth_nostencil_state);
+        device->CreateDepthStencilState(&depth_stencil_settings, &nodepth_nostencil_state);
 
         // ===========================================================
         // alpha blending set-up
@@ -322,6 +398,60 @@ WinMain(
         ID3D11BlendState *blend_state = 0;
         device->CreateBlendState(&blend_state_desc, &blend_state);
         context->OMSetBlendState(blend_state, 0, 0xFFFFFFFF);
+
+
+        // ===========================================================
+        // Ui shaders
+        // ===========================================================
+        Input_File vsh_file = {};
+        vsh_file.path = "ui.vsh";
+        Input_File psh_file = {};
+        psh_file.path = "ui.psh";
+
+        ID3D11VertexShader *vshader = 0;
+        ID3D11PixelShader  *pshader = 0;
+        if(win32_reload_file_if_changed(&vsh_file))
+            device->CreateVertexShader(vsh_file.data, vsh_file.size, 0, &vshader);
+
+        if(win32_reload_file_if_changed(&psh_file))
+            device->CreatePixelShader(psh_file.data, psh_file.size, 0, &pshader);
+
+        // ===========================================================
+        // Square mesh buffer
+        // ===========================================================
+        ID3D11Buffer *vbuffer = 0;
+        r32 square[] = {
+            0.f, -1.f,  0.f, 1.f,
+            1.f, -1.f,  1.f, 1.f,
+            1.f,  0.f,  1.f, 0.f,
+
+            1.f,  0.f,  1.f, 0.f,
+            0.f,  0.f,  0.f, 0.f,
+            0.f, -1.f,  0.f, 1.f
+        };
+
+        u32 vertices_size = sizeof(square);
+        u32 vert_stride  = 4*sizeof(r32);
+
+        D3D11_SUBRESOURCE_DATA raw_vert_data = {square};
+        D3D11_BUFFER_DESC vert_buff_desc     = {};
+        vert_buff_desc.ByteWidth = sizeof(square);
+        vert_buff_desc.Usage = D3D11_USAGE_IMMUTABLE;
+        vert_buff_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+        vert_buff_desc.StructureByteStride = vert_stride;
+        device->CreateBuffer(&vert_buff_desc, &raw_vert_data, (ID3D11Buffer **)&vbuffer);
+
+        // ===========================================================
+        // Input Layout
+        // ===========================================================
+        ID3D11InputLayout *input_layout = 0;
+        D3D11_INPUT_ELEMENT_DESC in_desc[] = {
+                {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+                {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        };
+        device->CreateInputLayout(in_desc, 2, vsh_file.data, vsh_file.size, &input_layout); 
+
+
 
         MSG message = {};
 
@@ -389,10 +519,21 @@ WinMain(
                 AssertF(QueryPerformanceCounter((LARGE_INTEGER *)&current_performance_counter));
                 dtime = (r32)(current_performance_counter - last_performance_counter) / (r32)performance_counter_frequency;
             }
-
             r32 clear_color[] = {0.06f, 0.5f, 0.8f, 1.f};
-            context->ClearRenderTargetView(render_target_rgb, clear_color);
+            //context->ClearRenderTargetView(render_target_rgb, clear_color);
 
+            context->OMSetRenderTargets(1, &render_target_rgb, 0);
+            context->OMSetDepthStencilState(nodepth_nostencil_state, 1);
+
+            context->VSSetShader(vshader, 0, 0);
+            context->PSSetShader(pshader, 0, 0);
+
+            u32 offsets = 0;
+            context->IASetVertexBuffers(0, 1, &vbuffer, &vert_stride, &offsets);
+            context->IASetInputLayout(input_layout);
+            context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+            context->Draw(6, 0);
 
             swap_chain->Present(1, 0);
             AssertF(QueryPerformanceCounter((LARGE_INTEGER *)&current_performance_counter));
