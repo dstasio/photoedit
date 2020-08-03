@@ -520,7 +520,7 @@ WinMain(
                 dtime = (r32)(current_performance_counter - last_performance_counter) / (r32)performance_counter_frequency;
             }
             r32 clear_color[] = {0.06f, 0.5f, 0.8f, 1.f};
-            //context->ClearRenderTargetView(render_target_rgb, clear_color);
+            context->ClearRenderTargetView(render_target_rgb, clear_color);
 
             context->OMSetRenderTargets(1, &render_target_rgb, 0);
             context->OMSetDepthStencilState(nodepth_nostencil_state, 1);
