@@ -16,6 +16,7 @@
 #endif
 
 #include "datatypes.h"
+#include "phe_math.h"
 #include <stdio.h>
 
 #if PHE_INTERNAL
@@ -452,6 +453,19 @@ WinMain(
         device->CreateInputLayout(in_desc, 2, vsh_file.data, vsh_file.size, &input_layout); 
 
 
+        // ===========================================================
+        // constant buffer setup
+        // ===========================================================
+        ID3D11Buffer *matrix_buff = 0;
+        D3D11_BUFFER_DESC matrix_buff_desc = {};
+        matrix_buff_desc.ByteWidth = 3*sizeof(m4);
+        matrix_buff_desc.Usage = D3D11_USAGE_DYNAMIC;
+        matrix_buff_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        matrix_buff_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        matrix_buff_desc.MiscFlags = 0;
+        matrix_buff_desc.StructureByteStride = sizeof(m4);
+        device->CreateBuffer(&matrix_buff_desc, 0, &matrix_buff);
+        context->VSSetConstantBuffers(0, 1, &matrix_buff);
 
         MSG message = {};
 
@@ -527,6 +541,19 @@ WinMain(
 
             context->VSSetShader(vshader, 0, 0);
             context->PSSetShader(pshader, 0, 0);
+
+            D3D11_MAPPED_SUBRESOURCE matrices_map = {};
+            context->Map(matrix_buff, 0, D3D11_MAP_WRITE_DISCARD, 0, &matrices_map);
+
+            m4 *matrix_array = (m4 *)matrices_map.pData;
+
+            r32 ar = (r32)WIDTH/(r32)HEIGHT;
+            v2 size = {0.3f, 0.3f};
+            size.x /= ar;
+            v2 pos = {0.f, 0.f};
+
+            matrix_array[0] = Translation_m4(pos.x, pos.y, 0)*Scale_m4(size);
+            context->Unmap(matrix_buff, 0);
 
             u32 offsets = 0;
             context->IASetVertexBuffers(0, 1, &vbuffer, &vert_stride, &offsets);
