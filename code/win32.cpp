@@ -65,6 +65,8 @@
 
 global b32 global_running;
 global b32 global_error;
+global u32 ui_square_active;
+global u32 ui_square_hot;
 
 inline u64
 win32_get_last_write_time(char *Path)
@@ -625,7 +627,26 @@ WinMain(
             context->VSSetShader(vshader, 0, 0);
             context->PSSetShader(pshader, 0, 0);
 
-            if (input.lmouse_down) {
+            if ((input.mouse.x > square_pos.x) &&
+                (input.mouse.x < square_pos.x + square_size.x) &&
+                (input.mouse.y > square_pos.y - square_size.y) &&
+                (input.mouse.y < square_pos.y))
+            {
+                if (!ui_square_hot)  ui_square_hot = 1;
+                else
+                {
+                    if (ui_square_active)
+                    {
+                        if (input.lmouse_up) ui_square_active = 0;
+                    }
+                    else if (input.lmouse_down)
+                        ui_square_active = 1;
+                }
+            }
+            else
+                ui_square_hot = 0;
+
+            if (ui_square_active) {
                 square_pos += input.drag_delta;
             }
             inform("mouse: (%f, %f)\n", input.mouse.x, input.mouse.y);
@@ -652,16 +673,8 @@ WinMain(
 #define FLAGS_MOUSE_HOT      1
 #define FLAGS_MOUSE_ACTIVE   2
                 flags_map[FLAGS_MOUSE] = FLAGS_MOUSE_INACTIVE;
-                if ((input.mouse.x > square_pos.x) &&
-                    (input.mouse.x < square_pos.x + square_size.x) &&
-                    (input.mouse.y > square_pos.y - square_size.y) &&
-                    (input.mouse.y < square_pos.y))
-                {
-                    if (input.lmouse_down)
-                        flags_map[FLAGS_MOUSE] = FLAGS_MOUSE_ACTIVE;
-                    else
-                        flags_map[FLAGS_MOUSE] = FLAGS_MOUSE_HOT;
-                }
+                if (ui_square_active) flags_map[FLAGS_MOUSE] = FLAGS_MOUSE_ACTIVE;
+                else if (ui_square_hot) flags_map[FLAGS_MOUSE] = FLAGS_MOUSE_HOT;
                 context->Unmap(flags_buff, 0);
             }
 
