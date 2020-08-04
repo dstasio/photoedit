@@ -228,9 +228,11 @@ struct Input
     Input_Keyboard pressed;
     Input_Keyboard held;
 
-    v2i mouse;
+    v2  mouse;
     u32 lmouse_down;
     u32 lmouse_up;
+    v2  drag_delta;  // this delta is frame-by-frame
+    v2  drag_start;  // drag_start gets set every frame
 
     i16 dwheel;
 };
@@ -282,14 +284,6 @@ WinMain(
         GetWindowRect(main_window, &window_rect);
         u32 window_width  = window_rect.right - window_rect.left;
         u32 window_height = window_rect.bottom - window_rect.top;
-
-        //
-        // raw input set-up
-        //
-        //RAWINPUTDEVICE raw_in_devices[] = {
-        //    {0x01, 0x02, 0, main_window}
-        //};
-        //RegisterRawInputDevices(raw_in_devices, 1, sizeof(raw_in_devices[0]));
 
 #if PHE_INTERNAL
         LPVOID base_address = (LPVOID)Terabytes(2);
@@ -581,30 +575,11 @@ WinMain(
                             key_up(VK_MENU,    alt);
                         } break;
 
-                        case WM_INPUT:
-                        {
-#if 0
-                            RAWINPUT raw_input = {};
-                            u32 raw_size = sizeof(raw_input);
-                            GetRawInputData((HRAWINPUT)Message.lParam, RID_INPUT, &raw_input, &raw_size, sizeof(RAWINPUTHEADER));
-                            RAWMOUSE raw_mouse = raw_input.data.mouse;
-                            if (raw_mouse.usFlags == MOUSE_MOVE_RELATIVE)
-                            {
-                                input.dmouse.x = raw_mouse.lLastX;
-                                input.dmouse.y = raw_mouse.lLastY;
-                            }
-
-                            if (raw_mouse.usButtonFlags & RI_MOUSE_WHEEL)
-                            {
-                                input.dwheel = raw_mouse.usButtonData;
-                            }
-                            SetCursorPos((window_rect.right - window_rect.left)/2, (window_rect.bottom - window_rect.top)/2);
-#endif
-                        } break;
-
                         case WM_LBUTTONDOWN:
                         {
                             input.lmouse_down = 1;
+                            input.drag_start = input.mouse;
+                            input.drag_delta = {};
                         } break;
 
                         case WM_LBUTTONUP:
@@ -615,10 +590,13 @@ WinMain(
 
                         case WM_MOUSEMOVE:
                         {
-                            input.mouse.x = ((i16*)&message.lParam)[0];
-                            input.mouse.y = ((i16*)&message.lParam)[1];
+                            i16 x = ((i16*)&message.lParam)[0];
+                            i16 y = ((i16*)&message.lParam)[1];
+                            input.mouse = {(r32)x / (r32)WIDTH, (r32)y / (r32)HEIGHT};
+                            input.mouse *= 2.f;
+                            input.mouse -= make_v2(1.f);
+                            input.mouse.y *= -1.f;
 
-                            //SetCursorPos((window_rect.right - window_rect.left)/2, (window_rect.bottom - window_rect.top)/2);
                         } break;
 
                         default:
@@ -631,6 +609,10 @@ WinMain(
                 AssertF(QueryPerformanceCounter((LARGE_INTEGER *)&current_performance_counter));
                 dtime = (r32)(current_performance_counter - last_performance_counter) / (r32)performance_counter_frequency;
             }
+            if (input.lmouse_down) {
+                input.drag_delta = input.mouse - input.drag_start;
+                input.drag_start = input.mouse;
+            }
             // clearing frame
             r32 clear_color[] = {0.06f, 0.5f, 0.8f, 1.f};
             context->ClearRenderTargetView(render_target_rgb, clear_color);
@@ -642,6 +624,11 @@ WinMain(
             // shaders
             context->VSSetShader(vshader, 0, 0);
             context->PSSetShader(pshader, 0, 0);
+
+            if (input.lmouse_down) {
+                square_pos += input.drag_delta;
+            }
+            inform("mouse: (%f, %f)\n", input.mouse.x, input.mouse.y);
 
             // sending transform matrix to gpu
             {
@@ -664,15 +651,11 @@ WinMain(
 #define FLAGS_MOUSE_INACTIVE 0
 #define FLAGS_MOUSE_HOT      1
 #define FLAGS_MOUSE_ACTIVE   2
-                v2 normalized_mouse = {(r32)input.mouse.x / (r32)WIDTH, (r32)input.mouse.y / (r32)HEIGHT};
-                normalized_mouse *= 2.f;
-                normalized_mouse -= make_v2(1.f);
                 flags_map[FLAGS_MOUSE] = FLAGS_MOUSE_INACTIVE;
-                inform("Mouse: (%f, %f)\n", normalized_mouse.x, normalized_mouse.y);
-                if ((normalized_mouse.x > square_pos.x) &&
-                    (normalized_mouse.x < square_pos.x + square_size.x) &&
-                    (normalized_mouse.y > square_pos.y) &&
-                    (normalized_mouse.y < square_pos.y + square_size.y))
+                if ((input.mouse.x > square_pos.x) &&
+                    (input.mouse.x < square_pos.x + square_size.x) &&
+                    (input.mouse.y > square_pos.y - square_size.y) &&
+                    (input.mouse.y < square_pos.y))
                 {
                     if (input.lmouse_down)
                         flags_map[FLAGS_MOUSE] = FLAGS_MOUSE_ACTIVE;
