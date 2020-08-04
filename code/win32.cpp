@@ -32,8 +32,8 @@
 #define inform(i, ...)
 #define warn(w, ...)
 #endif
-#define key_down(code, key)    {if(Message.wParam == (code))  input.held.key = 1;}
-#define key_up(code, key)      {if(Message.wParam == (code)) {input.held.key = 0;input.pressed.key = 1;}}
+#define key_down(code, key)    {if(message.wParam == (code))  input.held.key = 1;}
+#define key_up(code, key)      {if(message.wParam == (code)) {input.held.key = 0;input.pressed.key = 1;}}
 #define file_time_to_u64(wt) ((wt).dwLowDateTime | ((u64)((wt).dwHighDateTime) << 32))
 
 #define VK_A 0x41
@@ -191,6 +191,38 @@ LRESULT CALLBACK window_proc(
     return(result);
 }
 
+struct Input_Keyboard
+{
+    u32 up;
+    u32 down;
+    u32 left;
+    u32 right;
+
+    u32 w;
+    u32 a;
+    u32 s;
+    u32 d;
+
+    u32 f;
+
+    u32 space;
+    u32 shift;
+    u32 ctrl;
+    u32 alt;
+    u32 esc;
+};
+
+struct Input
+{
+    Input_Keyboard pressed;
+    Input_Keyboard held;
+
+    v2i mouse;
+    u32 lmouse_down;
+    u32 lmouse_up;
+
+    i16 dwheel;
+};
 
 int
 WinMain(
@@ -442,6 +474,10 @@ WinMain(
         vert_buff_desc.StructureByteStride = vert_stride;
         device->CreateBuffer(&vert_buff_desc, &raw_vert_data, (ID3D11Buffer **)&vbuffer);
 
+        r32 ar = (r32)WIDTH/(r32)HEIGHT;
+        v2 square_size = {0.3f/ar, 0.3f};
+        v2 square_pos  = {0.f, 0.f};
+
         // ===========================================================
         // Input Layout
         // ===========================================================
@@ -457,17 +493,29 @@ WinMain(
         // constant buffer setup
         // ===========================================================
         ID3D11Buffer *matrix_buff = 0;
-        D3D11_BUFFER_DESC matrix_buff_desc = {};
-        matrix_buff_desc.ByteWidth = 3*sizeof(m4);
-        matrix_buff_desc.Usage = D3D11_USAGE_DYNAMIC;
-        matrix_buff_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-        matrix_buff_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-        matrix_buff_desc.MiscFlags = 0;
-        matrix_buff_desc.StructureByteStride = sizeof(m4);
-        device->CreateBuffer(&matrix_buff_desc, 0, &matrix_buff);
+        ID3D11Buffer  *flags_buff = 0;
+
+        D3D11_BUFFER_DESC cbuffer_desc = {};
+        cbuffer_desc.ByteWidth = 3*sizeof(m4);
+        cbuffer_desc.Usage = D3D11_USAGE_DYNAMIC;
+        cbuffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        cbuffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        cbuffer_desc.MiscFlags = 0;
+        cbuffer_desc.StructureByteStride = sizeof(m4);
+        device->CreateBuffer(&cbuffer_desc, 0, &matrix_buff);
         context->VSSetConstantBuffers(0, 1, &matrix_buff);
 
+        cbuffer_desc.ByteWidth = max(sizeof(u32), 16);
+        cbuffer_desc.Usage = D3D11_USAGE_DYNAMIC;
+        cbuffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        cbuffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        cbuffer_desc.MiscFlags = 0;
+        cbuffer_desc.StructureByteStride = sizeof(u32);
+        device->CreateBuffer(&cbuffer_desc, 0, &flags_buff);
+        context->PSSetConstantBuffers(0, 1, &flags_buff);
+
         MSG message = {};
+        Input input = {};
 
         i64 last_performance_counter = 0;
         i64 current_performance_counter = 0;
@@ -484,10 +532,38 @@ WinMain(
                     {
                         case WM_KEYDOWN:
                         {
+                            key_down(VK_UP,      up);
+                            key_down(VK_DOWN,    down);
+                            key_down(VK_LEFT,    left);
+                            key_down(VK_RIGHT,   right);
+                            key_down(VK_W,       w);
+                            key_down(VK_A,       a);
+                            key_down(VK_S,       s);
+                            key_down(VK_D,       d);
+                            key_down(VK_F,       f);
+                            key_down(VK_SPACE,   space);
+                            key_down(VK_SHIFT,   shift);
+                            key_down(VK_CONTROL, ctrl);
+                            key_down(VK_ESCAPE,  esc);
+                            key_down(VK_MENU,    alt);
                         } break;
 
                         case WM_KEYUP:
                         {
+                            key_up(VK_UP,      up);
+                            key_up(VK_DOWN,    down);
+                            key_up(VK_LEFT,    left);
+                            key_up(VK_RIGHT,   right);
+                            key_up(VK_W,       w);
+                            key_up(VK_A,       a);
+                            key_up(VK_S,       s);
+                            key_up(VK_D,       d);
+                            key_up(VK_F,       f);
+                            key_up(VK_SPACE,   space);
+                            key_up(VK_SHIFT,   shift);
+                            key_up(VK_CONTROL, ctrl);
+                            key_up(VK_ESCAPE,  esc);
+                            key_up(VK_MENU,    alt);
                         } break;
 
                         case WM_INPUT:
@@ -511,17 +587,13 @@ WinMain(
 #endif
                         } break;
 
-                        //case WM_MOUSEMOVE:
-                        //{
-                        //    i16 m_x = ((i16*)&Message.lParam)[0];
-                        //    i16 m_y = ((i16*)&Message.lParam)[1];
-                        //    NewInput->dm_x = NewInput->m_x - m_x;
-                        //    NewInput->dm_y = NewInput->m_y - m_y;
-                        //    NewInput->m_x = m_x;
-                        //    NewInput->m_y = m_y;
+                        case WM_MOUSEMOVE:
+                        {
+                            input.mouse.x = ((i16*)&message.lParam)[0];
+                            input.mouse.y = ((i16*)&message.lParam)[1];
 
-                        //    //SetCursorPos((window_rect.right - window_rect.left)/2, (window_rect.bottom - window_rect.top)/2);
-                        //} break;
+                            //SetCursorPos((window_rect.right - window_rect.left)/2, (window_rect.bottom - window_rect.top)/2);
+                        } break;
 
                         default:
                         {
@@ -533,40 +605,70 @@ WinMain(
                 AssertF(QueryPerformanceCounter((LARGE_INTEGER *)&current_performance_counter));
                 dtime = (r32)(current_performance_counter - last_performance_counter) / (r32)performance_counter_frequency;
             }
+            // clearing frame
             r32 clear_color[] = {0.06f, 0.5f, 0.8f, 1.f};
             context->ClearRenderTargetView(render_target_rgb, clear_color);
 
+            // state settings, possibly redundant
             context->OMSetRenderTargets(1, &render_target_rgb, 0);
             context->OMSetDepthStencilState(nodepth_nostencil_state, 1);
 
+            // shaders
             context->VSSetShader(vshader, 0, 0);
             context->PSSetShader(pshader, 0, 0);
 
-            D3D11_MAPPED_SUBRESOURCE matrices_map = {};
-            context->Map(matrix_buff, 0, D3D11_MAP_WRITE_DISCARD, 0, &matrices_map);
+            // sending transform matrix to gpu
+            {
+                D3D11_MAPPED_SUBRESOURCE cbuffer_map = {};
+                context->Map(matrix_buff, 0, D3D11_MAP_WRITE_DISCARD, 0, &cbuffer_map);
 
-            m4 *matrix_array = (m4 *)matrices_map.pData;
+                m4 *matrix_map = (m4 *)cbuffer_map.pData;
 
-            r32 ar = (r32)WIDTH/(r32)HEIGHT;
-            v2 size = {0.3f, 0.3f};
-            size.x /= ar;
-            v2 pos = {0.f, 0.f};
+                matrix_map[0] = Translation_m4(square_pos.x, square_pos.y, 0)*Scale_m4(square_size);
+                context->Unmap(matrix_buff, 0);
+            }
 
-            matrix_array[0] = Translation_m4(pos.x, pos.y, 0)*Scale_m4(size);
-            context->Unmap(matrix_buff, 0);
+            // sending flags to gpu
+            {
+                D3D11_MAPPED_SUBRESOURCE cbuffer_map = {};
+                context->Map(flags_buff, 0, D3D11_MAP_WRITE_DISCARD, 0, &cbuffer_map);
+                u32 *flags_map = (u32 *)cbuffer_map.pData;
 
+#define FLAGS_MOUSE 0
+#define FLAGS_MOUSE_INACTIVE 0
+#define FLAGS_MOUSE_HOT      1
+#define FLAGS_MOUSE_ACTIVE   2
+                v2 normalized_mouse = {(r32)input.mouse.x / (r32)WIDTH, (r32)input.mouse.y / (r32)HEIGHT};
+                normalized_mouse *= 2.f;
+                normalized_mouse -= make_v2(1.f);
+                flags_map[FLAGS_MOUSE] = FLAGS_MOUSE_INACTIVE;
+                inform("Mouse: (%f, %f)\n", normalized_mouse.x, normalized_mouse.y);
+                if ((normalized_mouse.x > square_pos.x) &&
+                    (normalized_mouse.x < square_pos.x + square_size.x) &&
+                    (normalized_mouse.y > square_pos.y) &&
+                    (normalized_mouse.y < square_pos.y + square_size.y))
+                {
+                    flags_map[FLAGS_MOUSE] = FLAGS_MOUSE_HOT;
+                }
+                context->Unmap(flags_buff, 0);
+            }
+
+            // setting square vertex buffer
             u32 offsets = 0;
             context->IASetVertexBuffers(0, 1, &vbuffer, &vert_stride, &offsets);
             context->IASetInputLayout(input_layout);
             context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
+            // rendering square
             context->Draw(6, 0);
 
             swap_chain->Present(1, 0);
+
+            // FPS counter
             AssertF(QueryPerformanceCounter((LARGE_INTEGER *)&current_performance_counter));
             dtime = (r32)(current_performance_counter - last_performance_counter) / (r32)performance_counter_frequency;
             last_performance_counter = current_performance_counter;
-            inform("Frametime: %f     FPS:%d\n", dtime, (u32)(1/dtime));
+            //inform("Frametime: %f     FPS:%d\n", dtime, (u32)(1/dtime));
         }
     }
     else

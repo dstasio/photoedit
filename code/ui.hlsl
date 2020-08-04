@@ -28,13 +28,24 @@ VS_OUTPUT main(VS_INPUT input)
 
 #elif PIXEL_HLSL // ==================================================
 
-SamplerState texture_sampler_state;
+#define MOUSE_INACTIVE 0
+#define MOUSE_HOT      1
+#define MOUSE_ACTIVE   2
 
-Texture2D font;
+cbuffer flags
+{
+    uint mouse;
+}
 
 float4 main(VS_OUTPUT input) : SV_TARGET
 {
     float4 color = float4(0.8f, 0.8f, 0.f, 1.f);
+    if (mouse == MOUSE_HOT) {
+        color = float4(0.3f, 0.8f, 0.5f, 1.f);
+    }
+    else if (mouse == MOUSE_ACTIVE) {
+        color = float4(0.2f, 0.6f, 0.3f, 1.f);
+    }
     //float4 output = color*font.Sample(texture_sampler_state, input.txc);
     return color;
 }

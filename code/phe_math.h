@@ -13,11 +13,24 @@
 // Vector 2
 // ===================================================================
 inline v2 make_v2(r32 x, r32 y) { return {x, y}; }
+inline v2 make_v2(r32 a)        { return {a, a}; }
+
+v2 operator-(v2 a, v2 b)
+{
+    v2 result = {a.x-b.x, a.y-b.y};
+    return result;
+}
 
 v2 operator*(v2 a, r32 b)
 {
     v2 result = {a.x*b, a.y*b};
     return result;
+}
+
+v2 &operator-=(v2 &a, v2 b)
+{
+    a = a - b;
+    return a;
 }
 
 v2 &operator*=(v2 &a, r32 b)
