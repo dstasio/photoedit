@@ -183,6 +183,17 @@ LRESULT CALLBACK window_proc(
             global_running = false;
         } break;
 
+        case WM_ACTIVATE:
+        case WM_MOUSEHOVER:
+        {
+            if (((w & 0xF) == WA_ACTIVE) || ((w & 0xF) == WA_CLICKACTIVE))
+            {
+                HCURSOR arrow = LoadCursorA(0, IDC_ARROW);
+                Assert(arrow);
+                SetCursor(arrow);
+            }
+        } break;
+
         default:
         {
             result = DefWindowProcA(window, message, w, l);
