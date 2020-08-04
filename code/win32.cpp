@@ -645,9 +645,17 @@ WinMain(
             }
             else
                 ui_square_hot = 0;
+            if (input.lmouse_up) ui_square_active = 0;
 
             if (ui_square_active) {
                 square_pos += input.drag_delta;
+
+                // @note: wrapping needed for debugging (square keeps moving after releasing left button if mouse speed is high enough)
+                // @cleanup: remove
+                if (square_pos.x < -1.f - square_size.x)  square_pos.x += 2.f;
+                else if (square_pos.x > 1.f + square_size.x)  square_pos.x -= 2.f;
+                if (square_pos.y < -1.f - square_size.y)  square_pos.y += 2.f;
+                else if (square_pos.y > 1.f + square_size.y)  square_pos.y -= 2.f;
             }
             inform("mouse: (%f, %f)\n", input.mouse.x, input.mouse.y);
 
