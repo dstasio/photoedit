@@ -524,6 +524,10 @@ WinMain(
         {
             AssertF(QueryPerformanceCounter((LARGE_INTEGER *)&current_performance_counter));
             r32 dtime = (r32)(current_performance_counter - last_performance_counter) / (r32)performance_counter_frequency;
+
+            input.pressed = {};
+            input.lmouse_up = 0;
+            input.dwheel = 0;
             while(dtime <= target_ms_per_frame)
             {
                 while(PeekMessageA(&message, main_window, 0, 0, PM_REMOVE))
@@ -587,6 +591,17 @@ WinMain(
 #endif
                         } break;
 
+                        case WM_LBUTTONDOWN:
+                        {
+                            input.lmouse_down = 1;
+                        } break;
+
+                        case WM_LBUTTONUP:
+                        {
+                            input.lmouse_down = 0;
+                            input.lmouse_up = 1;
+                        } break;
+
                         case WM_MOUSEMOVE:
                         {
                             input.mouse.x = ((i16*)&message.lParam)[0];
@@ -648,7 +663,10 @@ WinMain(
                     (normalized_mouse.y > square_pos.y) &&
                     (normalized_mouse.y < square_pos.y + square_size.y))
                 {
-                    flags_map[FLAGS_MOUSE] = FLAGS_MOUSE_HOT;
+                    if (input.lmouse_down)
+                        flags_map[FLAGS_MOUSE] = FLAGS_MOUSE_ACTIVE;
+                    else
+                        flags_map[FLAGS_MOUSE] = FLAGS_MOUSE_HOT;
                 }
                 context->Unmap(flags_buff, 0);
             }
