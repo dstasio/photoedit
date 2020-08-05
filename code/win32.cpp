@@ -667,10 +667,12 @@ WinMain(
             context->VSSetShader(vshader, 0, 0);
             context->PSSetShader(pshader, 0, 0);
 
-            inform("mouse: (%f, %f)\n", input.mouse.x, input.mouse.y);
+            local_persist b32 clicked = 0;
 
-            start_window(&ui, 1, {0.f, 0.f}, {0.3f, 0.3f});
-            start_window(&ui, 2, {-0.5f, -0.5f}, {0.4f, 0.4f});
+            if (start_window(&ui, 1, {0.f, 0.f}, {0.3f, 0.3f}))
+                clicked = !clicked;
+            if (clicked)
+                start_window(&ui, 2, {-0.5f, -0.5f}, {0.4f, 0.4f});
 
             swap_chain->Present(1, 0);
 
