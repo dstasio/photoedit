@@ -65,8 +65,6 @@
 
 global b32 global_running;
 global b32 global_error;
-global u32 ui_square_active;
-global u32 ui_square_hot;
 
 global ID3D11Buffer        *global_matrix_buff;
 global ID3D11Buffer        *global_flags_buff;
@@ -247,7 +245,7 @@ struct Input
     i16 dwheel;
 };
 
-void draw_square(v2 pos, v2 size)
+void draw_square(v2 pos, v2 size, u32 *flags)
 {
     // sending transform matrix to gpu
     {
@@ -266,13 +264,8 @@ void draw_square(v2 pos, v2 size)
         context->Map(global_flags_buff, 0, D3D11_MAP_WRITE_DISCARD, 0, &cbuffer_map);
         u32 *flags_map = (u32 *)cbuffer_map.pData;
 
-#define FLAGS_MOUSE 0
-#define FLAGS_MOUSE_INACTIVE 0
-#define FLAGS_MOUSE_HOT      1
-#define FLAGS_MOUSE_ACTIVE   2
-        flags_map[FLAGS_MOUSE] = FLAGS_MOUSE_INACTIVE;
-        if (ui_square_active) flags_map[FLAGS_MOUSE] = FLAGS_MOUSE_ACTIVE;
-        else if (ui_square_hot) flags_map[FLAGS_MOUSE] = FLAGS_MOUSE_HOT;
+        flags_map[0] = flags[0];
+
         context->Unmap(global_flags_buff, 0);
     }
 
@@ -286,6 +279,8 @@ void draw_square(v2 pos, v2 size)
     // rendering square
     context->Draw(6, 0);
 }
+
+#include "ui.cpp"
 
 int
 WinMain(
@@ -565,6 +560,9 @@ WinMain(
         MSG message = {};
         Input input = {};
 
+        Ui ui = {};
+        ui.input = &input;
+
         i64 last_performance_counter = 0;
         i64 current_performance_counter = 0;
         AssertF(QueryPerformanceCounter((LARGE_INTEGER *)&last_performance_counter));
@@ -652,6 +650,7 @@ WinMain(
                 AssertF(QueryPerformanceCounter((LARGE_INTEGER *)&current_performance_counter));
                 dtime = (r32)(current_performance_counter - last_performance_counter) / (r32)performance_counter_frequency;
             }
+
             if (input.lmouse_down) {
                 input.drag_delta = input.mouse - input.drag_start;
                 input.drag_start = input.mouse;
@@ -668,39 +667,10 @@ WinMain(
             context->VSSetShader(vshader, 0, 0);
             context->PSSetShader(pshader, 0, 0);
 
-            if ((input.mouse.x > square_pos.x) &&
-                (input.mouse.x < square_pos.x + square_size.x) &&
-                (input.mouse.y > square_pos.y - square_size.y) &&
-                (input.mouse.y < square_pos.y))
-            {
-                if (!ui_square_hot)  ui_square_hot = 1;
-                else
-                {
-                    if (ui_square_active)
-                    {
-                        if (input.lmouse_up) ui_square_active = 0;
-                    }
-                    else if (input.lmouse_down)
-                        ui_square_active = 1;
-                }
-            }
-            else
-                ui_square_hot = 0;
-            if (input.lmouse_up) ui_square_active = 0;
-
-            if (ui_square_active) {
-                square_pos += input.drag_delta;
-
-                // @note: wrapping needed for debugging (square keeps moving after releasing left button if mouse speed is high enough)
-                // @cleanup: remove
-                if (square_pos.x < -1.f - square_size.x)  square_pos.x += 2.f;
-                else if (square_pos.x > 1.f + square_size.x)  square_pos.x -= 2.f;
-                if (square_pos.y < -1.f - square_size.y)  square_pos.y += 2.f;
-                else if (square_pos.y > 1.f + square_size.y)  square_pos.y -= 2.f;
-            }
             inform("mouse: (%f, %f)\n", input.mouse.x, input.mouse.y);
 
-            draw_square(square_pos, square_size);
+            start_window(&ui, 1, {0.f, 0.f}, {0.3f, 0.3f});
+            start_window(&ui, 2, {-0.5f, -0.5f}, {0.4f, 0.4f});
 
             swap_chain->Present(1, 0);
 
