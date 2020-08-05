@@ -68,6 +68,14 @@ global b32 global_error;
 global u32 ui_square_active;
 global u32 ui_square_hot;
 
+global ID3D11Buffer        *global_matrix_buff;
+global ID3D11Buffer        *global_flags_buff;
+global ID3D11Device        *device;
+global ID3D11DeviceContext *context;
+global ID3D11Buffer        *vbuffer = 0;
+global ID3D11InputLayout   *input_layout = 0;
+
+
 inline u64
 win32_get_last_write_time(char *Path)
 {
@@ -239,6 +247,46 @@ struct Input
     i16 dwheel;
 };
 
+void draw_square(v2 pos, v2 size)
+{
+    // sending transform matrix to gpu
+    {
+        D3D11_MAPPED_SUBRESOURCE cbuffer_map = {};
+        context->Map(global_matrix_buff, 0, D3D11_MAP_WRITE_DISCARD, 0, &cbuffer_map);
+
+        m4 *matrix_map = (m4 *)cbuffer_map.pData;
+
+        matrix_map[0] = Translation_m4(pos.x, pos.y, 0)*Scale_m4(size);
+        context->Unmap(global_matrix_buff, 0);
+    }
+
+    // sending flags to gpu
+    {
+        D3D11_MAPPED_SUBRESOURCE cbuffer_map = {};
+        context->Map(global_flags_buff, 0, D3D11_MAP_WRITE_DISCARD, 0, &cbuffer_map);
+        u32 *flags_map = (u32 *)cbuffer_map.pData;
+
+#define FLAGS_MOUSE 0
+#define FLAGS_MOUSE_INACTIVE 0
+#define FLAGS_MOUSE_HOT      1
+#define FLAGS_MOUSE_ACTIVE   2
+        flags_map[FLAGS_MOUSE] = FLAGS_MOUSE_INACTIVE;
+        if (ui_square_active) flags_map[FLAGS_MOUSE] = FLAGS_MOUSE_ACTIVE;
+        else if (ui_square_hot) flags_map[FLAGS_MOUSE] = FLAGS_MOUSE_HOT;
+        context->Unmap(global_flags_buff, 0);
+    }
+
+    // setting square vertex buffer
+    u32 offsets = 0;
+    u32 vert_stride = 4*sizeof(r32);
+    context->IASetVertexBuffers(0, 1, &vbuffer, &vert_stride, &offsets);
+    context->IASetInputLayout(input_layout);
+    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    // rendering square
+    context->Draw(6, 0);
+}
+
 int
 WinMain(
     HINSTANCE instance,
@@ -308,8 +356,6 @@ WinMain(
         //        D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, __uuidof(ID2D1Factory), &factory_options, &d2d_factory);
 
         IDXGISwapChain *swap_chain;
-        ID3D11Device *device;
-        ID3D11DeviceContext *context;
         DXGI_MODE_DESC display_mode_desc = {};
         //display_mode_desc.Width = WIDTH;
         //display_mode_desc.Height = HEIGHT;
@@ -459,7 +505,6 @@ WinMain(
         // ===========================================================
         // Square mesh buffer
         // ===========================================================
-        ID3D11Buffer *vbuffer = 0;
         r32 square[] = {
             0.f, -1.f,  0.f, 1.f,
             1.f, -1.f,  1.f, 1.f,
@@ -488,7 +533,6 @@ WinMain(
         // ===========================================================
         // Input Layout
         // ===========================================================
-        ID3D11InputLayout *input_layout = 0;
         D3D11_INPUT_ELEMENT_DESC in_desc[] = {
                 {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
                 {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -499,9 +543,6 @@ WinMain(
         // ===========================================================
         // constant buffer setup
         // ===========================================================
-        ID3D11Buffer *matrix_buff = 0;
-        ID3D11Buffer  *flags_buff = 0;
-
         D3D11_BUFFER_DESC cbuffer_desc = {};
         cbuffer_desc.ByteWidth = 3*sizeof(m4);
         cbuffer_desc.Usage = D3D11_USAGE_DYNAMIC;
@@ -509,8 +550,8 @@ WinMain(
         cbuffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         cbuffer_desc.MiscFlags = 0;
         cbuffer_desc.StructureByteStride = sizeof(m4);
-        device->CreateBuffer(&cbuffer_desc, 0, &matrix_buff);
-        context->VSSetConstantBuffers(0, 1, &matrix_buff);
+        device->CreateBuffer(&cbuffer_desc, 0, &global_matrix_buff);
+        context->VSSetConstantBuffers(0, 1, &global_matrix_buff);
 
         cbuffer_desc.ByteWidth = max(sizeof(u32), 16);
         cbuffer_desc.Usage = D3D11_USAGE_DYNAMIC;
@@ -518,8 +559,8 @@ WinMain(
         cbuffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         cbuffer_desc.MiscFlags = 0;
         cbuffer_desc.StructureByteStride = sizeof(u32);
-        device->CreateBuffer(&cbuffer_desc, 0, &flags_buff);
-        context->PSSetConstantBuffers(0, 1, &flags_buff);
+        device->CreateBuffer(&cbuffer_desc, 0, &global_flags_buff);
+        context->PSSetConstantBuffers(0, 1, &global_flags_buff);
 
         MSG message = {};
         Input input = {};
@@ -659,41 +700,7 @@ WinMain(
             }
             inform("mouse: (%f, %f)\n", input.mouse.x, input.mouse.y);
 
-            // sending transform matrix to gpu
-            {
-                D3D11_MAPPED_SUBRESOURCE cbuffer_map = {};
-                context->Map(matrix_buff, 0, D3D11_MAP_WRITE_DISCARD, 0, &cbuffer_map);
-
-                m4 *matrix_map = (m4 *)cbuffer_map.pData;
-
-                matrix_map[0] = Translation_m4(square_pos.x, square_pos.y, 0)*Scale_m4(square_size);
-                context->Unmap(matrix_buff, 0);
-            }
-
-            // sending flags to gpu
-            {
-                D3D11_MAPPED_SUBRESOURCE cbuffer_map = {};
-                context->Map(flags_buff, 0, D3D11_MAP_WRITE_DISCARD, 0, &cbuffer_map);
-                u32 *flags_map = (u32 *)cbuffer_map.pData;
-
-#define FLAGS_MOUSE 0
-#define FLAGS_MOUSE_INACTIVE 0
-#define FLAGS_MOUSE_HOT      1
-#define FLAGS_MOUSE_ACTIVE   2
-                flags_map[FLAGS_MOUSE] = FLAGS_MOUSE_INACTIVE;
-                if (ui_square_active) flags_map[FLAGS_MOUSE] = FLAGS_MOUSE_ACTIVE;
-                else if (ui_square_hot) flags_map[FLAGS_MOUSE] = FLAGS_MOUSE_HOT;
-                context->Unmap(flags_buff, 0);
-            }
-
-            // setting square vertex buffer
-            u32 offsets = 0;
-            context->IASetVertexBuffers(0, 1, &vbuffer, &vert_stride, &offsets);
-            context->IASetInputLayout(input_layout);
-            context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-            // rendering square
-            context->Draw(6, 0);
+            draw_square(square_pos, square_size);
 
             swap_chain->Present(1, 0);
 
