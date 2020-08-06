@@ -247,6 +247,7 @@ struct Input
 
 void draw_square(v2 pos, v2 size, u32 *flags)
 {
+    size.x /= ((r32)WIDTH/(r32)HEIGHT);
     // sending transform matrix to gpu
     {
         D3D11_MAPPED_SUBRESOURCE cbuffer_map = {};
@@ -271,13 +272,13 @@ void draw_square(v2 pos, v2 size, u32 *flags)
 
     // setting square vertex buffer
     u32 offsets = 0;
-    u32 vert_stride = 4*sizeof(r32);
+    u32 vert_stride = 5*sizeof(r32);
     context->IASetVertexBuffers(0, 1, &vbuffer, &vert_stride, &offsets);
     context->IASetInputLayout(input_layout);
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     // rendering square
-    context->Draw(6, 0);
+    context->Draw(18, 0);
 }
 
 #include "ui.cpp"
@@ -500,22 +501,57 @@ WinMain(
         // ===========================================================
         // Square mesh buffer
         // ===========================================================
-        r32 square[] = {
-            0.f, -1.f,  0.f, 1.f,
-            1.f, -1.f,  1.f, 1.f,
-            1.f,  0.f,  1.f, 0.f,
+        //r32 square[] = {
+        //    0.f, -1.f,  0.f, 1.f,
+        //    1.f, -1.f,  1.f, 1.f,
+        //    1.f,  0.f,  1.f, 0.f,
 
-            1.f,  0.f,  1.f, 0.f,
-            0.f,  0.f,  0.f, 0.f,
-            0.f, -1.f,  0.f, 1.f
+        //    1.f,  0.f,  1.f, 0.f,
+        //    0.f,  0.f,  0.f, 0.f,
+        //    0.f, -1.f,  0.f, 1.f
+        //};
+        // @todo: fix texture coordinates
+        r32 eps = 0.03f;
+        r32 rounded_square[] = {
+            1-eps,     0.f,  0.f, 0.f, 0.f,
+              0.f,    -eps,  0.f, 0.f, 0.f,
+              eps,    -1.f,  0.f, 0.f, 0.f,
+
+              eps,    -1.f,  0.f, 0.f, 0.f,
+              1.f, eps-1.f,  0.f, 0.f, 0.f,
+            1-eps,     0.f,  0.f, 0.f, 0.f, 
+
+            1-eps,     0.f,  0.f, 0.f, 0.f, 
+              eps,     0.f,  0.f, 0.f, 0.f, 
+              0.f,    -eps,  0.f, 0.f, 0.f,
+
+              0.f,    -eps,  0.f, 0.f, 0.f,
+              0.f, eps-1.f,  0.f, 0.f, 0.f,
+              eps,    -1.f,  0.f, 0.f, 0.f,
+
+              eps,    -1.f,  0.f, 0.f, 0.f,
+            1-eps,    -1.f,  0.f, 0.f, 0.f,
+              1.f, eps-1.f,  0.f, 0.f, 0.f,
+
+              1.f, eps-1.f,  0.f, 0.f, 0.f,
+              1.f,    -eps,  0.f, 0.f, 0.f,
+            1-eps,     0.f,  0.f, 0.f, 0.f
+
+            //0.f, -1.f,  0.f, 1.f, 0.f,
+            //1.f, -1.f,  1.f, 1.f, 0.f,
+            //1.f,  0.f,  1.f, 0.f, 0.f,
+
+            //1.f,  0.f,  1.f, 0.f, 0.f,
+            //0.f,  0.f,  0.f, 0.f, 0.f,
+            //0.f, -1.f,  0.f, 1.f, 0.f,
         };
 
-        u32 vertices_size = sizeof(square);
-        u32 vert_stride  = 4*sizeof(r32);
+        u32 vertices_size = sizeof(rounded_square);
+        u32 vert_stride  = 5*sizeof(r32);
 
-        D3D11_SUBRESOURCE_DATA raw_vert_data = {square};
+        D3D11_SUBRESOURCE_DATA raw_vert_data = {rounded_square};
         D3D11_BUFFER_DESC vert_buff_desc     = {};
-        vert_buff_desc.ByteWidth = sizeof(square);
+        vert_buff_desc.ByteWidth = vertices_size;
         vert_buff_desc.Usage = D3D11_USAGE_IMMUTABLE;
         vert_buff_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
         vert_buff_desc.StructureByteStride = vert_stride;
@@ -529,8 +565,8 @@ WinMain(
         // Input Layout
         // ===========================================================
         D3D11_INPUT_ELEMENT_DESC in_desc[] = {
-                {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-                {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0},
+                {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,    0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+                {"COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0},
         };
         device->CreateInputLayout(in_desc, 2, vsh_file.data, vsh_file.size, &input_layout); 
 

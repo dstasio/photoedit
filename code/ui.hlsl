@@ -1,7 +1,7 @@
 struct VS_OUTPUT
 {
     float4 pos : SV_POSITION;
-    float2 txc : TEXCOORD;
+    float3 col : COLOR;
 };
 
 #if VERTEX_HLSL // ===================================================
@@ -9,7 +9,7 @@ struct VS_OUTPUT
 struct VS_INPUT
 {
     float2 pos    : POSITION;
-    float2 txc    : TEXCOORD;
+    float3 col    : COLOR;
 };
 
 cbuffer Matrices: register(b0)
@@ -21,7 +21,7 @@ VS_OUTPUT main(VS_INPUT input)
 {
     VS_OUTPUT output;
     output.pos = mul(model, float4(input.pos.xy, 0.f, 1.f));
-    output.txc = input.txc;
+    output.col = input.col;
 
     return output;
 }
@@ -46,6 +46,7 @@ float4 main(VS_OUTPUT input) : SV_TARGET
     else if (mouse == MOUSE_ACTIVE) {
         color = float4(0.2f, 0.6f, 0.3f, 1.f);
     }
+    //color = float4(input.col, 1.f);
     //float4 output = color*font.Sample(texture_sampler_state, input.txc);
     return color;
 }

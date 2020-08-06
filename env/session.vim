@@ -42,6 +42,7 @@ set shiftwidth=4
 set smarttab
 set softtabstop=4
 set statusline=\ %f%m%=\ %y\ %{&fileencoding?&fileencoding:&encoding}[%{&fileformat}]\ %p%%\ %l:%c\ 
+set textwidth=70
 set wildmenu
 set wildmode=list:full
 set window=54
@@ -56,7 +57,8 @@ set shortmess=aoO
 badd +26 build.bat
 badd +1 win32.cpp
 badd +37 ui.hlsl
-badd +2 phe_math.h
+badd +24 phe_math.h
+badd +31 ui.cpp
 argglobal
 silent! argdel *
 edit win32.cpp
@@ -69,8 +71,8 @@ set nosplitbelow
 set nosplitright
 wincmd t
 set winminheight=1 winheight=1 winminwidth=1 winwidth=1
-exe 'vert 1resize ' . ((&columns * 230 + 116) / 232)
-exe 'vert 2resize ' . ((&columns * 1 + 116) / 232)
+exe 'vert 1resize ' . ((&columns * 116 + 116) / 232)
+exe 'vert 2resize ' . ((&columns * 115 + 116) / 232)
 argglobal
 setlocal keymap=
 setlocal noarabic
@@ -189,15 +191,15 @@ set nowrap
 setlocal nowrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 652 - ((22 * winheight(0) + 26) / 53)
+let s:l = 250 - ((10 * winheight(0) + 26) / 53)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-652
-normal! 071|
+250
+normal! 039|
 wincmd w
 argglobal
-if bufexists('phe_math.h') | buffer phe_math.h | else | edit phe_math.h | endif
+if bufexists('ui.hlsl') | buffer ui.hlsl | else | edit ui.hlsl | endif
 setlocal keymap=
 setlocal noarabic
 setlocal autoindent
@@ -215,7 +217,7 @@ setlocal cinoptions=l1,g0,N-s,E-s,t0,(0,w1,Ws,m1,=0
 setlocal cinwords=if,else,while,do,for,switch
 set colorcolumn=70
 setlocal colorcolumn=70
-setlocal comments=sO:*\ -,mO:*\ \ ,exO:*/,s1:/*,mb:*,ex:*/,://
+setlocal comments=s1:/*,mb:*,ex:*/,://,b:#,:%,:XCOMM,n:>,fb:-
 setlocal commentstring=/*%s*/
 setlocal complete=.,w,b,u,t,i
 setlocal concealcursor=
@@ -232,8 +234,8 @@ setlocal nodiff
 setlocal equalprg=
 setlocal errorformat=
 setlocal expandtab
-if &filetype != 'cpp'
-setlocal filetype=cpp
+if &filetype != ''
+setlocal filetype=
 endif
 setlocal fixendofline
 setlocal foldcolumn=0
@@ -247,7 +249,7 @@ setlocal foldminlines=1
 setlocal foldnestmax=20
 setlocal foldtext=foldtext()
 setlocal formatexpr=
-setlocal formatoptions=croql
+setlocal formatoptions=tcq
 setlocal formatlistpat=^\\s*\\d\\+[\\]:.)}\\t\ ]\\s*
 setlocal formatprg=
 setlocal grepprg=
@@ -273,7 +275,7 @@ setlocal nrformats=bin,octal,hex
 set number
 setlocal number
 setlocal numberwidth=4
-setlocal omnifunc=ccomplete#Complete
+setlocal omnifunc=syntaxcomplete#Complete
 setlocal path=
 setlocal nopreserveindent
 setlocal nopreviewwindow
@@ -296,8 +298,8 @@ setlocal statusline=
 setlocal suffixesadd=
 setlocal swapfile
 setlocal synmaxcol=3000
-if &syntax != 'cpp'
-setlocal syntax=cpp
+if &syntax != 'hlsl'
+setlocal syntax=hlsl
 endif
 setlocal tabstop=8
 setlocal tagcase=
@@ -315,15 +317,15 @@ set nowrap
 setlocal nowrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 30 - ((29 * winheight(0) + 26) / 53)
+let s:l = 50 - ((46 * winheight(0) + 26) / 53)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-30
-normal! 024|
+50
+normal! 06|
 wincmd w
-exe 'vert 1resize ' . ((&columns * 230 + 116) / 232)
-exe 'vert 2resize ' . ((&columns * 1 + 116) / 232)
+exe 'vert 1resize ' . ((&columns * 116 + 116) / 232)
+exe 'vert 2resize ' . ((&columns * 115 + 116) / 232)
 tabnext 1
 if exists('s:wipebuf') && s:wipebuf != bufnr('%')
   silent exe 'bwipe ' . s:wipebuf
