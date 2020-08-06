@@ -247,7 +247,6 @@ struct Input
 
 void draw_square(v2 pos, v2 size, u32 *flags)
 {
-    size.x /= ((r32)WIDTH/(r32)HEIGHT);
     // sending transform matrix to gpu
     {
         D3D11_MAPPED_SUBRESOURCE cbuffer_map = {};
@@ -368,7 +367,7 @@ WinMain(
         swap_chain_desc.OutputWindow = main_window;
         swap_chain_desc.Windowed = true;
         swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
-        swap_chain_desc.Flags;
+        //swap_chain_desc.Flags;
 
         D3D11CreateDeviceAndSwapChain(
             0,
@@ -511,7 +510,7 @@ WinMain(
         //    0.f, -1.f,  0.f, 1.f
         //};
         // @todo: fix texture coordinates
-        r32 eps = 0.03f;
+        r32 eps = 0.02f;
         r32 rounded_square[] = {
             1-eps,     0.f,  0.f, 0.f, 0.f,
               0.f,    -eps,  0.f, 0.f, 0.f,
@@ -704,9 +703,9 @@ WinMain(
             context->PSSetShader(pshader, 0, 0);
 
             local_persist b32 clicked = 0;
+            local_persist v2 pos = {};
 
-            if (start_window(&ui, 1, {0.f, 0.f}, {0.3f, 0.3f}))
-                clicked = !clicked;
+            pos = start_window(&ui, 1, pos, {0.3f, 0.3f});
             if (clicked)
                 start_window(&ui, 2, {-0.5f, -0.5f}, {0.4f, 0.4f});
 
