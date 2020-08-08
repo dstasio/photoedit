@@ -8,16 +8,69 @@ struct Ui
     u32 hot;
     u32 active;
 
+    char *active_window;
+    char *hot_window;
     Input *input;
 };
 
-// @todo: maybe if user clicks, then leaves the button, but without
-// releasing hovers the button again it should activate?
+// compares strings and returns 1 if equal, 0 if different
+b32 same_string(char *s1, char *s2)
+{
+    b32 result = 1;
 
-v2
-start_window(Ui *ui, u32 id, v2 pos, v2 size)
+    if (!s1 || !s2)
+        result = 0;
+    else {
+        while (!((*s1 == '\0') && (*s2 == '\0')) && (result))
+        {
+            result = (*(s1++) == *(s2++));
+        }
+    }
+
+    return result;
+}
+
+// @todo: check if title address persists (if not, copy individual
+// characters instead of address) 
+v2 start_window(Ui *ui, char *title, v2 pos, v2 size)
 {
     size.x /= ((r32)WIDTH/(r32)HEIGHT);
+    if ((ui->input->mouse.x > pos.x) &&
+        (ui->input->mouse.x < pos.x + size.x) &&
+        (ui->input->mouse.y > pos.y - size.y) &&
+        (ui->input->mouse.y < pos.y))
+    {
+        if (same_string(ui->hot_window, title)) {
+            if (ui->input->lmouse_down)  ui->active_window = title;
+        }
+        else {
+            ui->hot_window = title;
+        }
+
+    }
+    else {
+        if (same_string(ui->hot_window, title))  ui->hot_window = 0;
+    }
+    if (same_string(ui->active_window, title) && (ui->input->lmouse_up)) {
+        ui->active_window = 0;
+    }
+
+    if (same_string(ui->active_window, title)) {
+        pos += ui->input->drag_delta;
+    }
+
+    u32 flag = FLAGS_MOUSE_INACTIVE;
+    draw_square(pos, size, &flag);
+    return pos;
+}
+
+// @todo: maybe if user clicks, then leaves the button, but without
+// releasing hovers the button again it should activate?
+b32
+button(Ui *ui, u32 id, v2 pos, v2 size)
+{
+    b32 result = 0;
+
     if ((ui->input->mouse.x > pos.x) &&
         (ui->input->mouse.x < pos.x + size.x) &&
         (ui->input->mouse.y > pos.y - size.y) &&
@@ -27,60 +80,26 @@ start_window(Ui *ui, u32 id, v2 pos, v2 size)
             if (ui->input->lmouse_down)  ui->active = id;
         }
         else {
-            ui->hot = id;
+            if (!ui->input->lmouse_down)  ui->hot = id;
         }
 
+        if ((ui->active == id) && (ui->input->lmouse_up)) {
+            result = 1;
+            ui->active = 0;
+        }
     }
     else {
         if (ui->hot == id)  ui->hot = 0;
-    }
-    if ((ui->active == id) && (ui->input->lmouse_up)) {
-        ui->active = 0;
-    }
-
-    if (ui->active == id) {
-        pos += ui->input->drag_delta;
+        if (ui->active == id)  ui->active = 0;
     }
 
     u32 flag = FLAGS_MOUSE_INACTIVE;
+    if (ui->active == id)
+        flag = FLAGS_MOUSE_ACTIVE;
+    else if (ui->hot == id)
+        flag = FLAGS_MOUSE_HOT;
     draw_square(pos, size, &flag);
-    return pos;
-}
 
-//b32
-//button(Ui *ui, u32 id, v2 pos, v2 size)
-//{
-//    b32 result = 0;
-//
-//    if ((ui->input->mouse.x > pos.x) &&
-//        (ui->input->mouse.x < pos.x + size.x) &&
-//        (ui->input->mouse.y > pos.y - size.y) &&
-//        (ui->input->mouse.y < pos.y))
-//    {
-//        if (ui->hot == id) {
-//            if (ui->input->lmouse_down)  ui->active = id;
-//        }
-//        else {
-//            if (!ui->input->lmouse_down)  ui->hot = id;
-//        }
-//
-//        if ((ui->active == id) && (ui->input->lmouse_up)) {
-//            result = 1;
-//            ui->active = 0;
-//        }
-//    }
-//    else {
-//        if (ui->hot == id)  ui->hot = 0;
-//        if (ui->active == id)  ui->active = 0;
-//    }
-//
-//    u32 flag = FLAGS_MOUSE_INACTIVE;
-//    if (ui->active == id)
-//        flag = FLAGS_MOUSE_ACTIVE;
-//    else if (ui->hot == id)
-//        flag = FLAGS_MOUSE_HOT;
-//    draw_square(pos, size, &flag);
-//
-//    return result;
-//}
+    return result;
+}
 

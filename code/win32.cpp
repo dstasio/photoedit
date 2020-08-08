@@ -480,7 +480,6 @@ WinMain(
         device->CreateBlendState(&blend_state_desc, &blend_state);
         context->OMSetBlendState(blend_state, 0, 0xFFFFFFFF);
 
-
         // ===========================================================
         // Ui shaders
         // ===========================================================
@@ -705,9 +704,9 @@ WinMain(
             local_persist b32 clicked = 0;
             local_persist v2 pos = {};
 
-            pos = start_window(&ui, 1, pos, {0.3f, 0.3f});
+            pos = start_window(&ui, "window1", pos, {0.3f, 0.3f});
             if (clicked)
-                start_window(&ui, 2, {-0.5f, -0.5f}, {0.4f, 0.4f});
+                start_window(&ui, "window2", {-0.5f, -0.5f}, {0.4f, 0.4f});
 
             swap_chain->Present(1, 0);
 
