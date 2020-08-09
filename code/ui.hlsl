@@ -39,7 +39,7 @@ cbuffer flags
 
 float4 main(VS_OUTPUT input) : SV_TARGET
 {
-    float4 color = float4(0.8f, 0.8f, 0.f, 1.f);
+    float4 color = float4(0.3f, 0.3f, 0.3f, 1.f);
     if (mouse == MOUSE_HOT) {
         color = float4(0.3f, 0.8f, 0.5f, 1.f);
     }

@@ -16,9 +16,10 @@ struct Ui
     u32 hot;
     u32 active;
 
-    Ui_Window *active_window;
-    Ui_Window *hot_window;
-    Ui_Window *current_win;
+    //Ui_Window *active_window;
+    //Ui_Window *hot_window;
+    Ui_Window *drag_win;
+    Ui_Window *resize_win;
     Input *input;
 };
 
@@ -39,8 +40,7 @@ b32 same_string(char *s1, char *s2)
     return result;
 }
 
-// @todo: check if title address persists (if not, copy individual
-// characters instead of address) 
+// @todo: fix corners when resizing
 void start_window(Ui *ui, Ui_Window *win)
 {
     if (win->size.x == 0)
@@ -49,31 +49,39 @@ void start_window(Ui *ui, Ui_Window *win)
         win->size.y = 0.2f;
     win->size.x /= ((r32)WIDTH/(r32)HEIGHT);
 
+    u32 flag = FLAGS_MOUSE_INACTIVE;
+    if ((Abs(ui->input->mouse.x - win->pos.x - win->size.x) < 0.05f) &&
+        (Abs(ui->input->mouse.y - win->pos.y + win->size.y) < 0.05f))
+    {
+        if (ui->input->lmouse_down) {
+            ui->resize_win = win;
+            flag = FLAGS_MOUSE_HOT;
+        }
+    }
     if ((ui->input->mouse.x > win->pos.x) &&
         (ui->input->mouse.x < win->pos.x + win->size.x) &&
         (ui->input->mouse.y > win->pos.y - win->size.y) &&
-        (ui->input->mouse.y < win->pos.y))
+        (ui->input->mouse.y < win->pos.y) &&
+        !ui->resize_win)
     {
-        if (ui->hot_window == win) {
-            if (ui->input->lmouse_down)  ui->active_window = win;
+        if (ui->input->lmouse_down) {
+            ui->drag_win = win;
+            flag = FLAGS_MOUSE_ACTIVE;
         }
-        else {
-            ui->hot_window = win;
-        }
-
     }
-    else {
-        if (ui->hot_window == win)  ui->hot_window = 0;
-    }
-    if ((ui->active_window == win) && (ui->input->lmouse_up)) {
-        ui->active_window = 0;
+    if (ui->input->lmouse_up) {
+        ui->drag_win = 0;
+        ui->resize_win = 0;
     }
 
-    if (ui->active_window == win) {
+    if (ui->drag_win == win) {
         win->pos += ui->input->drag_delta;
     }
+    else if (ui->resize_win == win) {
+        win->size.x += ui->input->drag_delta.x;
+        win->size.y -= ui->input->drag_delta.y;
+    }
 
-    u32 flag = FLAGS_MOUSE_INACTIVE;
     draw_square(win->pos, win->size, &flag);
 
     // @cleanup: find another way for ar correction

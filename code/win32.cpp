@@ -690,7 +690,7 @@ WinMain(
                 input.drag_start = input.mouse;
             }
             // clearing frame
-            r32 clear_color[] = {0.06f, 0.5f, 0.8f, 1.f};
+            r32 clear_color[] = {0.04f, 0.03f, 0.07f, 1.f};
             context->ClearRenderTargetView(render_target_rgb, clear_color);
 
             // state settings, possibly redundant
@@ -701,9 +701,10 @@ WinMain(
             context->VSSetShader(vshader, 0, 0);
             context->PSSetShader(pshader, 0, 0);
 
-            local_persist Ui_Window win[2] = {};
-            win[0].size = {0.3f, 0.3f};
-            win[1].size = {0.4f, 0.4f};
+            local_persist Ui_Window win[2] = {
+                {0, {  0.f,  0.f}, {0.3f, 0.3f}},
+                {0, {-0.5f, 0.4f}, {0.4f, 0.4f}}
+            };
 
             start_window(&ui, &win[0]);
             start_window(&ui, &win[1]);

@@ -39,7 +39,14 @@ Sqrt(r32 a)
 inline i32
 Abs(i32 a)
 {
-    i32 result = (a < 0) ? -1*a : a;
+    i32 result = (a < 0) ? -a : a;
+    return result;
+}
+
+inline r32
+Abs(r32 a)
+{
+    r32 result = (a < 0) ? -a : a;
     return result;
 }
 
