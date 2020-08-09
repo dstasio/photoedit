@@ -85,6 +85,28 @@ win32_get_last_write_time(char *Path)
     return result;
 }
 
+#define CURSOR_ARROW  0
+#define CURSOR_RESIZE 1
+inline void
+win32_debug_set_cursor(u32 id = CURSOR_ARROW)
+{
+    HCURSOR arrow = 0;
+    switch(id)
+    {
+        case CURSOR_ARROW:
+        {
+            arrow = LoadCursorA(0, IDC_ARROW);
+        } break;
+
+        case CURSOR_RESIZE:
+        {
+            arrow = LoadCursorA(0, IDC_SIZENWSE);
+        } break;
+    }
+    Assert(arrow);
+    SetCursor(arrow);
+}
+
 struct Input_File
 {
     char *path;
@@ -196,9 +218,7 @@ LRESULT CALLBACK window_proc(
         {
             if (((w & 0xF) == WA_ACTIVE) || ((w & 0xF) == WA_CLICKACTIVE))
             {
-                HCURSOR arrow = LoadCursorA(0, IDC_ARROW);
-                Assert(arrow);
-                SetCursor(arrow);
+                win32_debug_set_cursor();
             }
         } break;
 
@@ -708,6 +728,10 @@ WinMain(
 
             start_window(&ui, &win[0]);
             start_window(&ui, &win[1]);
+
+            // @todo, @cleanup: move this elsewhere?
+            if (!ui.resize_win)
+                win32_debug_set_cursor(CURSOR_ARROW);
 
             swap_chain->Present(1, 0);
 

@@ -2,6 +2,7 @@
 #define FLAGS_MOUSE_INACTIVE 0
 #define FLAGS_MOUSE_HOT      1
 #define FLAGS_MOUSE_ACTIVE   2
+#define FLAGS_MOUSE_WINDOW_BACKGROUND 3
 
 struct Ui_Window
 {
@@ -13,13 +14,12 @@ struct Ui_Window
 
 struct Ui
 {
-    u32 hot;
-    u32 active;
+    char *hot;
+    char *active;
 
-    //Ui_Window *active_window;
-    //Ui_Window *hot_window;
     Ui_Window *drag_win;
     Ui_Window *resize_win;
+    Ui_Window *drawing_win;
     Input *input;
 };
 
@@ -49,14 +49,11 @@ void start_window(Ui *ui, Ui_Window *win)
         win->size.y = 0.2f;
     win->size.x /= ((r32)WIDTH/(r32)HEIGHT);
 
-    u32 flag = FLAGS_MOUSE_INACTIVE;
     if ((Abs(ui->input->mouse.x - win->pos.x - win->size.x) < 0.05f) &&
         (Abs(ui->input->mouse.y - win->pos.y + win->size.y) < 0.05f))
     {
-        if (ui->input->lmouse_down) {
-            ui->resize_win = win;
-            flag = FLAGS_MOUSE_HOT;
-        }
+        win32_debug_set_cursor(CURSOR_RESIZE);
+        ui->resize_win = win;
     }
     if ((ui->input->mouse.x > win->pos.x) &&
         (ui->input->mouse.x < win->pos.x + win->size.x) &&
@@ -64,66 +61,68 @@ void start_window(Ui *ui, Ui_Window *win)
         (ui->input->mouse.y < win->pos.y) &&
         !ui->resize_win)
     {
-        if (ui->input->lmouse_down) {
+        if (ui->input->lmouse_down)
             ui->drag_win = win;
-            flag = FLAGS_MOUSE_ACTIVE;
-        }
     }
     if (ui->input->lmouse_up) {
         ui->drag_win = 0;
         ui->resize_win = 0;
     }
 
-    if (ui->drag_win == win) {
-        win->pos += ui->input->drag_delta;
-    }
-    else if (ui->resize_win == win) {
-        win->size.x += ui->input->drag_delta.x;
-        win->size.y -= ui->input->drag_delta.y;
+    if (ui->input->lmouse_down) {
+        if (ui->drag_win == win) {
+            win->pos += ui->input->drag_delta;
+        }
+        else if (ui->resize_win == win) {
+            win->size.x += ui->input->drag_delta.x;
+            win->size.y -= ui->input->drag_delta.y;
+        }
     }
 
+    u32 flag = FLAGS_MOUSE_WINDOW_BACKGROUND;
     draw_square(win->pos, win->size, &flag);
 
+    ui->drawing_win = win;
     // @cleanup: find another way for ar correction
     win->size.x *= ((r32)WIDTH/(r32)HEIGHT);
 }
 
 // @todo: maybe if user clicks, then leaves the button, but without
 // releasing hovers the button again it should activate?
-b32
-button(Ui *ui, u32 id, v2 pos, v2 size)
-{
-    b32 result = 0;
-
-    if ((ui->input->mouse.x > pos.x) &&
-        (ui->input->mouse.x < pos.x + size.x) &&
-        (ui->input->mouse.y > pos.y - size.y) &&
-        (ui->input->mouse.y < pos.y))
-    {
-        if (ui->hot == id) {
-            if (ui->input->lmouse_down)  ui->active = id;
-        }
-        else {
-            if (!ui->input->lmouse_down)  ui->hot = id;
-        }
-
-        if ((ui->active == id) && (ui->input->lmouse_up)) {
-            result = 1;
-            ui->active = 0;
-        }
-    }
-    else {
-        if (ui->hot == id)  ui->hot = 0;
-        if (ui->active == id)  ui->active = 0;
-    }
-
-    u32 flag = FLAGS_MOUSE_INACTIVE;
-    if (ui->active == id)
-        flag = FLAGS_MOUSE_ACTIVE;
-    else if (ui->hot == id)
-        flag = FLAGS_MOUSE_HOT;
-    draw_square(pos, size, &flag);
-
-    return result;
-}
+//b32
+//button(Ui *ui, char *label)
+//{
+//    b32 result = 0;
+//
+//    if ((ui->input->mouse.x > pos.x) &&
+//        (ui->input->mouse.x < pos.x + size.x) &&
+//        (ui->input->mouse.y > pos.y - size.y) &&
+//        (ui->input->mouse.y < pos.y))
+//    {
+//        if (ui->hot == id) {
+//            if (ui->input->lmouse_down)  ui->active = id;
+//        }
+//        else {
+//            if (!ui->input->lmouse_down)  ui->hot = id;
+//        }
+//
+//        if ((ui->active == id) && (ui->input->lmouse_up)) {
+//            result = 1;
+//            ui->active = 0;
+//        }
+//    }
+//    else {
+//        if (ui->hot == id)  ui->hot = 0;
+//        if (ui->active == id)  ui->active = 0;
+//    }
+//
+//    u32 flag = FLAGS_MOUSE_INACTIVE;
+//    if (ui->active == id)
+//        flag = FLAGS_MOUSE_ACTIVE;
+//    else if (ui->hot == id)
+//        flag = FLAGS_MOUSE_HOT;
+//    draw_square(pos, size, &flag);
+//
+//    return result;
+//}
 
