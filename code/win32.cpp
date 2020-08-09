@@ -701,12 +701,12 @@ WinMain(
             context->VSSetShader(vshader, 0, 0);
             context->PSSetShader(pshader, 0, 0);
 
-            local_persist b32 clicked = 0;
-            local_persist v2 pos = {};
+            local_persist Ui_Window win[2] = {};
+            win[0].size = {0.3f, 0.3f};
+            win[1].size = {0.4f, 0.4f};
 
-            pos = start_window(&ui, "window1", pos, {0.3f, 0.3f});
-            if (clicked)
-                start_window(&ui, "window2", {-0.5f, -0.5f}, {0.4f, 0.4f});
+            start_window(&ui, &win[0]);
+            start_window(&ui, &win[1]);
 
             swap_chain->Present(1, 0);
 

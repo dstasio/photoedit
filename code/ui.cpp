@@ -3,13 +3,22 @@
 #define FLAGS_MOUSE_HOT      1
 #define FLAGS_MOUSE_ACTIVE   2
 
+struct Ui_Window
+{
+    u32 item_index;
+
+    v2 pos;
+    v2 size;
+};
+
 struct Ui
 {
     u32 hot;
     u32 active;
 
-    char *active_window;
-    char *hot_window;
+    Ui_Window *active_window;
+    Ui_Window *hot_window;
+    Ui_Window *current_win;
     Input *input;
 };
 
@@ -32,36 +41,43 @@ b32 same_string(char *s1, char *s2)
 
 // @todo: check if title address persists (if not, copy individual
 // characters instead of address) 
-v2 start_window(Ui *ui, char *title, v2 pos, v2 size)
+void start_window(Ui *ui, Ui_Window *win)
 {
-    size.x /= ((r32)WIDTH/(r32)HEIGHT);
-    if ((ui->input->mouse.x > pos.x) &&
-        (ui->input->mouse.x < pos.x + size.x) &&
-        (ui->input->mouse.y > pos.y - size.y) &&
-        (ui->input->mouse.y < pos.y))
+    if (win->size.x == 0)
+        win->size.x = 0.2f;
+    if (win->size.y == 0)
+        win->size.y = 0.2f;
+    win->size.x /= ((r32)WIDTH/(r32)HEIGHT);
+
+    if ((ui->input->mouse.x > win->pos.x) &&
+        (ui->input->mouse.x < win->pos.x + win->size.x) &&
+        (ui->input->mouse.y > win->pos.y - win->size.y) &&
+        (ui->input->mouse.y < win->pos.y))
     {
-        if (same_string(ui->hot_window, title)) {
-            if (ui->input->lmouse_down)  ui->active_window = title;
+        if (ui->hot_window == win) {
+            if (ui->input->lmouse_down)  ui->active_window = win;
         }
         else {
-            ui->hot_window = title;
+            ui->hot_window = win;
         }
 
     }
     else {
-        if (same_string(ui->hot_window, title))  ui->hot_window = 0;
+        if (ui->hot_window == win)  ui->hot_window = 0;
     }
-    if (same_string(ui->active_window, title) && (ui->input->lmouse_up)) {
+    if ((ui->active_window == win) && (ui->input->lmouse_up)) {
         ui->active_window = 0;
     }
 
-    if (same_string(ui->active_window, title)) {
-        pos += ui->input->drag_delta;
+    if (ui->active_window == win) {
+        win->pos += ui->input->drag_delta;
     }
 
     u32 flag = FLAGS_MOUSE_INACTIVE;
-    draw_square(pos, size, &flag);
-    return pos;
+    draw_square(win->pos, win->size, &flag);
+
+    // @cleanup: find another way for ar correction
+    win->size.x *= ((r32)WIDTH/(r32)HEIGHT);
 }
 
 // @todo: maybe if user clicks, then leaves the button, but without

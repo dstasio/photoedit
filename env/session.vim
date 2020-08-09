@@ -56,7 +56,7 @@ endif
 set shortmess=aoO
 badd +26 build.bat
 badd +1 win32.cpp
-badd +37 ui.hlsl
+badd +34 ui.hlsl
 badd +24 phe_math.h
 badd +31 ui.cpp
 argglobal
@@ -191,15 +191,15 @@ set nowrap
 setlocal nowrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 250 - ((10 * winheight(0) + 26) / 53)
+let s:l = 705 - ((39 * winheight(0) + 26) / 53)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-250
-normal! 039|
+705
+normal! 038|
 wincmd w
 argglobal
-if bufexists('ui.hlsl') | buffer ui.hlsl | else | edit ui.hlsl | endif
+if bufexists('ui.cpp') | buffer ui.cpp | else | edit ui.cpp | endif
 setlocal keymap=
 setlocal noarabic
 setlocal autoindent
@@ -217,7 +217,7 @@ setlocal cinoptions=l1,g0,N-s,E-s,t0,(0,w1,Ws,m1,=0
 setlocal cinwords=if,else,while,do,for,switch
 set colorcolumn=70
 setlocal colorcolumn=70
-setlocal comments=s1:/*,mb:*,ex:*/,://,b:#,:%,:XCOMM,n:>,fb:-
+setlocal comments=sO:*\ -,mO:*\ \ ,exO:*/,s1:/*,mb:*,ex:*/,://
 setlocal commentstring=/*%s*/
 setlocal complete=.,w,b,u,t,i
 setlocal concealcursor=
@@ -234,8 +234,8 @@ setlocal nodiff
 setlocal equalprg=
 setlocal errorformat=
 setlocal expandtab
-if &filetype != ''
-setlocal filetype=
+if &filetype != 'cpp'
+setlocal filetype=cpp
 endif
 setlocal fixendofline
 setlocal foldcolumn=0
@@ -249,7 +249,7 @@ setlocal foldminlines=1
 setlocal foldnestmax=20
 setlocal foldtext=foldtext()
 setlocal formatexpr=
-setlocal formatoptions=tcq
+setlocal formatoptions=croql
 setlocal formatlistpat=^\\s*\\d\\+[\\]:.)}\\t\ ]\\s*
 setlocal formatprg=
 setlocal grepprg=
@@ -275,7 +275,7 @@ setlocal nrformats=bin,octal,hex
 set number
 setlocal number
 setlocal numberwidth=4
-setlocal omnifunc=syntaxcomplete#Complete
+setlocal omnifunc=ccomplete#Complete
 setlocal path=
 setlocal nopreserveindent
 setlocal nopreviewwindow
@@ -298,8 +298,8 @@ setlocal statusline=
 setlocal suffixesadd=
 setlocal swapfile
 setlocal synmaxcol=3000
-if &syntax != 'hlsl'
-setlocal syntax=hlsl
+if &syntax != 'cpp'
+setlocal syntax=cpp
 endif
 setlocal tabstop=8
 setlocal tagcase=
@@ -317,13 +317,14 @@ set nowrap
 setlocal nowrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 50 - ((46 * winheight(0) + 26) / 53)
+let s:l = 31 - ((26 * winheight(0) + 26) / 53)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-50
-normal! 06|
+31
+normal! 0
 wincmd w
+2wincmd w
 exe 'vert 1resize ' . ((&columns * 116 + 116) / 232)
 exe 'vert 2resize ' . ((&columns * 115 + 116) / 232)
 tabnext 1
