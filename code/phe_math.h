@@ -371,15 +371,15 @@ Perspective_m4(r32 fov, r32 ar, r32 n, r32 f)
     return matrix;
 }
 
+// @todo: z is pass-through
 inline m4
-Ortho_m4(r32 ar, r32 n, r32 f)
+Ortho_m4(r32 l, r32 r, r32 t, r32 b)
 {
-    // @todo: test this matrix
     m4 matrix = {
-        1.f/ar, 0.f,        0.f, 0.f,
-        0.f,    1.f,        0.f, 0.f,
-        0.f,    0.f, -1.f/(f-n), 0.f,
-        0.f,    0.f,    n/(f-n), 1.f
+         2.f/(r-l),      0.f,            0.f, 0.f,
+         0.f,            2.f/(t-b),      0.f, 0.f,
+         0.f,            0.f,            1.f, 0.f,
+        (-l - r)/(r-l), (-b - t)/(t-b),  0.f, 1.f
     };
     return matrix;
 }
@@ -388,10 +388,10 @@ inline m4
 Transform_m4(v3 pos, v3 euler, v3 scale)
 {
     //m4 matrix = Translation_m4(pos) * Rotation_m4(euler) * Scale_m4(scale);
-    m4 matrix = Scale_m4(scale);
-    matrix.m[3][0] = pos.x;
-    matrix.m[3][1] = pos.y;
-    matrix.m[3][2] = pos.z;
+    m4 matrix = Translation_m4(pos) * Scale_m4(scale);
+    //matrix.m[3][0] = pos.x;
+    //matrix.m[3][1] = pos.y;
+    //matrix.m[3][2] = pos.z;
     return matrix;
 }
 

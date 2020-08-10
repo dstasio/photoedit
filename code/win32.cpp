@@ -4,9 +4,6 @@
 #include <windows.h>
 #include <d3d11.h>
 
-#define WIDTH 1024
-#define HEIGHT 720
-
 #if PHE_DEBUG
 #define Assert(expr)  if(!(expr)) {*(int *)0 = 0;}
 #define AssertF(expr) if(!(expr)) {*(int *)0 = 0;}
@@ -65,6 +62,9 @@
 
 global b32 global_running;
 global b32 global_error;
+
+global u32 global_width = 1024;
+global u32 global_height = 720;
 
 global ID3D11Buffer        *global_matrix_buff;
 global ID3D11Buffer        *global_flags_buff;
@@ -265,16 +265,23 @@ struct Input
     i16 dwheel;
 };
 
+struct Matrix_Map
+{
+    m4 model;
+    m4 ortho;
+};
+
 void draw_square(v2 pos, v2 size, u32 *flags)
 {
+    r32 ar = (r32)global_width / (r32)global_height;
     // sending transform matrix to gpu
     {
         D3D11_MAPPED_SUBRESOURCE cbuffer_map = {};
         context->Map(global_matrix_buff, 0, D3D11_MAP_WRITE_DISCARD, 0, &cbuffer_map);
 
-        m4 *matrix_map = (m4 *)cbuffer_map.pData;
-
-        matrix_map[0] = Translation_m4(pos.x, pos.y, 0)*Scale_m4(size);
+        Matrix_Map *matrix_map = (Matrix_Map *)cbuffer_map.pData;
+        matrix_map->model = Translation_m4(pos.x, pos.y, 0)*Scale_m4(size);
+        matrix_map->ortho = Ortho_m4(0, ar, 0.f, 1.f);
         context->Unmap(global_matrix_buff, 0);
     }
 
@@ -330,7 +337,7 @@ WinMain(
 
     RegisterClassA(&window_class);
 
-    RECT window_rect = {0, 0, WIDTH, HEIGHT};
+    RECT window_rect = {0, 0, (i32)global_width, (i32)global_height};
     AdjustWindowRect(&window_rect, WS_OVERLAPPEDWINDOW, FALSE);
     window_rect.right  -= window_rect.left;
     window_rect.bottom -= window_rect.top;
@@ -372,8 +379,8 @@ WinMain(
 
         IDXGISwapChain *swap_chain;
         DXGI_MODE_DESC display_mode_desc = {};
-        //display_mode_desc.Width = WIDTH;
-        //display_mode_desc.Height = HEIGHT;
+        //display_mode_desc.Width = global_width;
+        //display_mode_desc.Height = global_height;
         display_mode_desc.RefreshRate = {60, 1};
         display_mode_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
         display_mode_desc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
@@ -416,8 +423,8 @@ WinMain(
         D3D11_VIEWPORT viewport = {};
         viewport.TopLeftX = 0;
         viewport.TopLeftY = 0;
-        viewport.Width = WIDTH;
-        viewport.Height = HEIGHT;
+        viewport.Width  = (r32)global_width;
+        viewport.Height = (r32)global_height;
         viewport.MinDepth = 0.f;
         viewport.MaxDepth = 1.f;
         context->RSSetViewports(1, &viewport);
@@ -519,41 +526,32 @@ WinMain(
         // ===========================================================
         // Square mesh buffer
         // ===========================================================
-        //r32 square[] = {
-        //    0.f, -1.f,  0.f, 1.f,
-        //    1.f, -1.f,  1.f, 1.f,
-        //    1.f,  0.f,  1.f, 0.f,
-
-        //    1.f,  0.f,  1.f, 0.f,
-        //    0.f,  0.f,  0.f, 0.f,
-        //    0.f, -1.f,  0.f, 1.f
-        //};
         // @todo: fix texture coordinates
         r32 eps = 0.02f;
         r32 rounded_square[] = {
-            1-eps,     0.f,  0.f, 0.f, 0.f,
-              0.f,    -eps,  0.f, 0.f, 0.f,
-              eps,    -1.f,  0.f, 0.f, 0.f,
+            1-eps,     0.f,  1.f, 0.f, 0.f,
+              0.f,     eps,  1.f, 0.f, 0.f,
+              eps,     1.f,  1.f, 0.f, 0.f,
 
-              eps,    -1.f,  0.f, 0.f, 0.f,
-              1.f, eps-1.f,  0.f, 0.f, 0.f,
-            1-eps,     0.f,  0.f, 0.f, 0.f, 
+              eps,     1.f,  0.f, 1.f, 0.f,
+              1.f, 1.f-eps,  0.f, 1.f, 0.f,
+            1-eps,     0.f,  0.f, 1.f, 0.f, 
 
-            1-eps,     0.f,  0.f, 0.f, 0.f, 
-              eps,     0.f,  0.f, 0.f, 0.f, 
-              0.f,    -eps,  0.f, 0.f, 0.f,
+            1-eps,     0.f,  0.f, 0.f, 1.f, 
+              eps,     0.f,  0.f, 0.f, 1.f, 
+              0.f,     eps,  0.f, 0.f, 1.f,
 
-              0.f,    -eps,  0.f, 0.f, 0.f,
-              0.f, eps-1.f,  0.f, 0.f, 0.f,
-              eps,    -1.f,  0.f, 0.f, 0.f,
+              0.f,     eps,  1.f, 1.f, 0.f,
+              0.f, 1.f-eps,  1.f, 1.f, 0.f,
+              eps,     1.f,  1.f, 1.f, 0.f,
 
-              eps,    -1.f,  0.f, 0.f, 0.f,
-            1-eps,    -1.f,  0.f, 0.f, 0.f,
-              1.f, eps-1.f,  0.f, 0.f, 0.f,
+              eps,     1.f,  0.f, 1.f, 1.f,
+            1-eps,     1.f,  0.f, 1.f, 1.f,
+              1.f, 1.f-eps,  0.f, 1.f, 1.f,
 
-              1.f, eps-1.f,  0.f, 0.f, 0.f,
-              1.f,    -eps,  0.f, 0.f, 0.f,
-            1-eps,     0.f,  0.f, 0.f, 0.f
+              1.f, 1.f-eps,  1.f, 0.f, 1.f,
+              1.f,     eps,  1.f, 0.f, 1.f,
+            1-eps,     0.f,  1.f, 0.f, 1.f
         };
 
         u32 vertices_size = sizeof(rounded_square);
@@ -566,10 +564,6 @@ WinMain(
         vert_buff_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
         vert_buff_desc.StructureByteStride = vert_stride;
         device->CreateBuffer(&vert_buff_desc, &raw_vert_data, (ID3D11Buffer **)&vbuffer);
-
-        r32 ar = (r32)WIDTH/(r32)HEIGHT;
-        v2 square_size = {0.3f/ar, 0.3f};
-        v2 square_pos  = {0.f, 0.f};
 
         // ===========================================================
         // Input Layout
@@ -585,7 +579,7 @@ WinMain(
         // constant buffer setup
         // ===========================================================
         D3D11_BUFFER_DESC cbuffer_desc = {};
-        cbuffer_desc.ByteWidth = 3*sizeof(m4);
+        cbuffer_desc.ByteWidth = sizeof(Matrix_Map);
         cbuffer_desc.Usage = D3D11_USAGE_DYNAMIC;
         cbuffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
         cbuffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -679,11 +673,7 @@ WinMain(
                         {
                             i16 x = ((i16*)&message.lParam)[0];
                             i16 y = ((i16*)&message.lParam)[1];
-                            input.mouse = {(r32)x / (r32)WIDTH, (r32)y / (r32)HEIGHT};
-                            input.mouse *= 2.f;
-                            input.mouse -= make_v2(1.f);
-                            input.mouse.y *= -1.f;
-
+                            input.mouse = {(r32)x / (r32)global_height, (r32)y / (r32)global_height};
                         } break;
 
                         default:
@@ -714,13 +704,14 @@ WinMain(
             context->PSSetShader(pshader, 0, 0);
 
             local_persist Ui_Window win[2] = {
-                {0, {  0.f,  0.f}, {0.3f, 0.3f}},
-                {0, {-0.5f, 0.4f}, {0.4f, 0.4f}}
+                {0, { 0.f,  0.f}, {0.3f, 0.3f}},
+                {0, {0.5f, 0.4f}, {0.4f, 0.4f}}
             };
 
             start_window(&ui, &win[0]);
             if (button(&ui, "button"))
-                inform("Clicked Button\n");
+                inform("Button pressed\n");
+            //end_window(&ui, &win[0]);
             start_window(&ui, &win[1]);
 
             // @todo, @cleanup: move this elsewhere?

@@ -74,15 +74,15 @@ void start_window(Ui *ui, Ui_Window *win)
     //win->size.x /= ((r32)WIDTH/(r32)HEIGHT);
 
     if ((Abs(ui->input->mouse.x - win->pos.x - win->size.x) < 0.05f) &&
-        (Abs(ui->input->mouse.y - win->pos.y + win->size.y) < 0.05f))
+        (Abs(ui->input->mouse.y - win->pos.y - win->size.y) < 0.05f))
     {
         win32_debug_set_cursor(CURSOR_RESIZE);
         ui->resize_win = win;
     }
     if ((ui->input->mouse.x > win->pos.x) &&
         (ui->input->mouse.x < win->pos.x + win->size.x) &&
-        (ui->input->mouse.y > win->pos.y - win->size.y) &&
-        (ui->input->mouse.y < win->pos.y) &&
+        (ui->input->mouse.y > win->pos.y) &&
+        (ui->input->mouse.y < win->pos.y + win->size.y) &&
         !ui->resize_win)
     {
         if (ui->input->lmouse_down)
@@ -98,8 +98,7 @@ void start_window(Ui *ui, Ui_Window *win)
             win->pos += ui->input->drag_delta;
         }
         else if (ui->resize_win == win) {
-            win->size.x += ui->input->drag_delta.x;
-            win->size.y -= ui->input->drag_delta.y;
+            win->size += ui->input->drag_delta;
         }
     }
 
@@ -120,15 +119,16 @@ button(Ui *ui, char *label)
     u32 hash = get_hash(label);
     v2 pos = ui->drawing_win->pos;
     r32 margin = 0.05f;
-    pos += make_v2(margin, -margin);
+    pos += make_v2(margin);
     v2 size = {ui->drawing_win->size.x - 2.f*margin, 0.05f};
-    inform("w(%f)  m(%f)  b(%f)\n", ui->drawing_win->size.x, margin, size.x);
 
     if ((ui->input->mouse.x > pos.x) &&
         (ui->input->mouse.x < pos.x + size.x) &&
-        (ui->input->mouse.y > pos.y - size.y) &&
-        (ui->input->mouse.y < pos.y))
+        (ui->input->mouse.y > pos.y) &&
+        (ui->input->mouse.y < pos.y + size.y))
     {
+        ui->drag_win = 0;
+        ui->resize_win = 0;
         if (ui->hot == hash) {
             if (ui->input->lmouse_down)  ui->active = hash;
         }

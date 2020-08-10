@@ -42,7 +42,6 @@ set shiftwidth=4
 set smarttab
 set softtabstop=4
 set statusline=\ %f%m%=\ %y\ %{&fileencoding?&fileencoding:&encoding}[%{&fileformat}]\ %p%%\ %l:%c\ 
-set textwidth=70
 set wildmenu
 set wildmode=list:full
 set window=54
@@ -56,9 +55,9 @@ endif
 set shortmess=aoO
 badd +26 build.bat
 badd +1 win32.cpp
-badd +34 ui.hlsl
+badd +37 ui.hlsl
 badd +24 phe_math.h
-badd +31 ui.cpp
+badd +130 ui.cpp
 argglobal
 silent! argdel *
 edit win32.cpp
@@ -71,8 +70,8 @@ set nosplitbelow
 set nosplitright
 wincmd t
 set winminheight=1 winheight=1 winminwidth=1 winwidth=1
-exe 'vert 1resize ' . ((&columns * 116 + 116) / 232)
-exe 'vert 2resize ' . ((&columns * 115 + 116) / 232)
+exe 'vert 1resize ' . ((&columns * 115 + 116) / 232)
+exe 'vert 2resize ' . ((&columns * 116 + 116) / 232)
 argglobal
 setlocal keymap=
 setlocal noarabic
@@ -191,12 +190,12 @@ set nowrap
 setlocal nowrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 705 - ((39 * winheight(0) + 26) / 53)
+let s:l = 714 - ((25 * winheight(0) + 26) / 53)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-705
-normal! 038|
+714
+normal! 014|
 wincmd w
 argglobal
 if bufexists('ui.cpp') | buffer ui.cpp | else | edit ui.cpp | endif
@@ -307,7 +306,7 @@ setlocal tags=
 setlocal termwinkey=
 setlocal termwinscroll=10000
 setlocal termwinsize=
-setlocal textwidth=70
+setlocal textwidth=0
 setlocal thesaurus=
 setlocal noundofile
 setlocal undolevels=-123456
@@ -317,16 +316,16 @@ set nowrap
 setlocal nowrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 31 - ((26 * winheight(0) + 26) / 53)
+let s:l = 111 - ((33 * winheight(0) + 26) / 53)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-31
+111
 normal! 0
 wincmd w
 2wincmd w
-exe 'vert 1resize ' . ((&columns * 116 + 116) / 232)
-exe 'vert 2resize ' . ((&columns * 115 + 116) / 232)
+exe 'vert 1resize ' . ((&columns * 115 + 116) / 232)
+exe 'vert 2resize ' . ((&columns * 116 + 116) / 232)
 tabnext 1
 if exists('s:wipebuf') && s:wipebuf != bufnr('%')
   silent exe 'bwipe ' . s:wipebuf
