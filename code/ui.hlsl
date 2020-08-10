@@ -31,6 +31,7 @@ VS_OUTPUT main(VS_INPUT input)
 #define MOUSE_INACTIVE 0
 #define MOUSE_HOT      1
 #define MOUSE_ACTIVE   2
+#define MOUSE_STUB     3
 
 cbuffer flags
 {
@@ -39,12 +40,15 @@ cbuffer flags
 
 float4 main(VS_OUTPUT input) : SV_TARGET
 {
-    float4 color = float4(0.3f, 0.3f, 0.3f, 1.f);
+    float4 color = float4(0.4f, 0.8f, 0.5f, 1.f);
     if (mouse == MOUSE_HOT) {
         color = float4(0.3f, 0.8f, 0.5f, 1.f);
     }
     else if (mouse == MOUSE_ACTIVE) {
         color = float4(0.2f, 0.6f, 0.3f, 1.f);
+    }
+    else if (mouse == MOUSE_STUB) {
+        color = float4(0.3f, 0.3f, 0.3f, 1.f);
     }
     //color = float4(input.col, 1.f);
     //float4 output = color*font.Sample(texture_sampler_state, input.txc);

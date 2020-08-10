@@ -554,14 +554,6 @@ WinMain(
               1.f, eps-1.f,  0.f, 0.f, 0.f,
               1.f,    -eps,  0.f, 0.f, 0.f,
             1-eps,     0.f,  0.f, 0.f, 0.f
-
-            //0.f, -1.f,  0.f, 1.f, 0.f,
-            //1.f, -1.f,  1.f, 1.f, 0.f,
-            //1.f,  0.f,  1.f, 0.f, 0.f,
-
-            //1.f,  0.f,  1.f, 0.f, 0.f,
-            //0.f,  0.f,  0.f, 0.f, 0.f,
-            //0.f, -1.f,  0.f, 1.f, 0.f,
         };
 
         u32 vertices_size = sizeof(rounded_square);
@@ -727,6 +719,8 @@ WinMain(
             };
 
             start_window(&ui, &win[0]);
+            if (button(&ui, "button"))
+                inform("Clicked Button\n");
             start_window(&ui, &win[1]);
 
             // @todo, @cleanup: move this elsewhere?
