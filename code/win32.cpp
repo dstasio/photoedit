@@ -66,12 +66,15 @@ global b32 global_error;
 global u32 global_width = 1024;
 global u32 global_height = 720;
 
-global ID3D11Buffer        *global_matrix_buff;
-global ID3D11Buffer        *global_flags_buff;
-global ID3D11Device        *device;
-global ID3D11DeviceContext *context;
-global ID3D11Buffer        *vbuffer = 0;
-global ID3D11InputLayout   *input_layout = 0;
+global IDXGISwapChain         *swap_chain;
+global ID3D11RenderTargetView *render_target_rgb;
+global ID3D11DepthStencilView *render_target_depth;
+global ID3D11Buffer           *global_matrix_buff;
+global ID3D11Buffer           *global_flags_buff;
+global ID3D11Device           *device;
+global ID3D11DeviceContext    *context;
+global ID3D11Buffer           *vbuffer = 0;
+global ID3D11InputLayout      *input_layout = 0;
 
 
 inline u64
@@ -193,6 +196,60 @@ PLATFORM_RELOAD_CHANGED_FILE(win32_reload_file_if_changed)
     return(has_changed);
 }
 
+inline void
+resize_render_targets(ID3D11RenderTargetView **rgb, ID3D11DepthStencilView **depth)
+{
+    if (swap_chain && context) {
+        context->OMSetRenderTargets(0, 0, 0);
+        if (render_target_rgb)
+            render_target_rgb->Release();
+        if (render_target_depth)
+            render_target_depth->Release();
+
+        swap_chain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
+
+        ID3D11Resource  *backbuffer = 0;
+        ID3D11Texture2D *depth_texture = 0;
+
+        // @todo: maybe 32 bits are too much
+        D3D11_DEPTH_STENCIL_VIEW_DESC depth_view_desc = {DXGI_FORMAT_D32_FLOAT, D3D11_DSV_DIMENSION_TEXTURE2D};
+
+        D3D11_TEXTURE2D_DESC depth_buffer_desc = {};
+        depth_buffer_desc.Width = global_width;
+        depth_buffer_desc.Height = global_height;
+        depth_buffer_desc.MipLevels = 1;
+        depth_buffer_desc.ArraySize = 1;
+        depth_buffer_desc.Format = DXGI_FORMAT_D32_FLOAT;
+        depth_buffer_desc.SampleDesc.Count = 1;
+        depth_buffer_desc.SampleDesc.Quality = 0;
+        depth_buffer_desc.Usage = D3D11_USAGE_DEFAULT;
+        depth_buffer_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+        depth_buffer_desc.MiscFlags = 0;
+        device->CreateTexture2D(&depth_buffer_desc, 0, &depth_texture);
+
+        swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void **)&backbuffer);
+        device->CreateRenderTargetView(backbuffer, 0, rgb);
+
+        device->CreateDepthStencilView(depth_texture, &depth_view_desc, depth);
+        backbuffer->Release();
+        // @todo: can I release the depth texture?
+        depth_texture->Release();
+
+        // ===========================================================
+        // Viewport set-up
+        // ===========================================================
+        D3D11_VIEWPORT viewport = {};
+        viewport.TopLeftX = 0;
+        viewport.TopLeftY = 0;
+        viewport.Width  = (r32)global_width;
+        viewport.Height = (r32)global_height;
+        viewport.MinDepth = 0.f;
+        viewport.MaxDepth = 1.f;
+        context->RSSetViewports(1, &viewport);
+    }
+
+}
+
 LRESULT CALLBACK window_proc(
     HWND   window,
     UINT   message,
@@ -220,6 +277,14 @@ LRESULT CALLBACK window_proc(
             {
                 win32_debug_set_cursor();
             }
+        } break;
+
+        case WM_SIZE:
+        {
+            global_width = LOWORD(l);
+            global_height = HIWORD(l);
+
+            resize_render_targets(&render_target_rgb, &render_target_depth);
         } break;
 
         default:
@@ -378,7 +443,6 @@ WinMain(
         //        ID2D1Factory1 *d2d_factory = 0;
         //        D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, __uuidof(ID2D1Factory), &factory_options, &d2d_factory);
 
-        IDXGISwapChain *swap_chain;
         DXGI_MODE_DESC display_mode_desc = {};
         //display_mode_desc.Width = global_width;
         //display_mode_desc.Height = global_height;
@@ -413,46 +477,9 @@ WinMain(
         );
 
         // ===========================================================
-        // Viewport set-up
-        // ===========================================================
-        D3D11_VIEWPORT viewport = {};
-        viewport.TopLeftX = 0;
-        viewport.TopLeftY = 0;
-        viewport.Width  = (r32)global_width;
-        viewport.Height = (r32)global_height;
-        viewport.MinDepth = 0.f;
-        viewport.MaxDepth = 1.f;
-        context->RSSetViewports(1, &viewport);
-
-        // ===========================================================
         // Depth and rgb buffers
         // ===========================================================
-        // @todo: maybe 32 bits are too much
-        ID3D11Resource  *backbuffer = 0;
-        ID3D11Texture2D *depth_texture = 0;
-        ID3D11RenderTargetView *render_target_rgb   = 0;
-        ID3D11DepthStencilView *render_target_depth = 0;
-
-        D3D11_DEPTH_STENCIL_VIEW_DESC depth_view_desc = {DXGI_FORMAT_D32_FLOAT, D3D11_DSV_DIMENSION_TEXTURE2D};
-
-        D3D11_TEXTURE2D_DESC depth_buffer_desc = {};
-        depth_buffer_desc.Width = global_width;
-        depth_buffer_desc.Height = global_height;
-        depth_buffer_desc.MipLevels = 1;
-        depth_buffer_desc.ArraySize = 1;
-        depth_buffer_desc.Format = DXGI_FORMAT_D32_FLOAT;
-        depth_buffer_desc.SampleDesc.Count = 1;
-        depth_buffer_desc.SampleDesc.Quality = 0;
-        depth_buffer_desc.Usage = D3D11_USAGE_DEFAULT;
-        depth_buffer_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-        depth_buffer_desc.MiscFlags = 0;
-        device->CreateTexture2D(&depth_buffer_desc, 0, &depth_texture);
-
-        swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void **)&backbuffer);
-        device->CreateRenderTargetView(backbuffer, 0, &render_target_rgb);
-
-        device->CreateDepthStencilView(depth_texture, &depth_view_desc, &render_target_depth);
-        //context->OMSetRenderTargets(1, &render_target_rgb, render_target_depth);
+        resize_render_targets(&render_target_rgb, &render_target_depth);
 
         // ===========================================================
         // Depth states
