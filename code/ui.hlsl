@@ -1,3 +1,19 @@
+#define MOUSE_INACTIVE 0
+#define MOUSE_HOT      1
+#define MOUSE_ACTIVE   2
+#define MOUSE_STUB     3
+#define DEPTH_0 0
+#define DEPTH_1 1
+#define DEPTH_2 2
+#define DEPTH_3 3
+#define DEPTH_4 4
+
+cbuffer flags
+{
+    uint mouse;
+    uint depth;
+}
+
 struct VS_OUTPUT
 {
     float4 pos : SV_POSITION;
@@ -21,23 +37,13 @@ cbuffer Matrices: register(b0)
 VS_OUTPUT main(VS_INPUT input)
 {
     VS_OUTPUT output;
-    output.pos = mul(ortho, mul(model, float4(input.pos.xy, 0.f, 1.f)));
+    output.pos = mul(ortho, mul(model, float4(input.pos.xy, (float)depth/10.f, 1.f)));
     output.col = input.col;
 
     return output;
 }
 
 #elif PIXEL_HLSL // ==================================================
-
-#define MOUSE_INACTIVE 0
-#define MOUSE_HOT      1
-#define MOUSE_ACTIVE   2
-#define MOUSE_STUB     3
-
-cbuffer flags
-{
-    uint mouse;
-}
 
 float4 main(VS_OUTPUT input) : SV_TARGET
 {

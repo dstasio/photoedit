@@ -292,6 +292,7 @@ void draw_square(v2 pos, v2 size, u32 *flags)
         u32 *flags_map = (u32 *)cbuffer_map.pData;
 
         flags_map[0] = flags[0];
+        flags_map[1] = flags[1];
 
         context->Unmap(global_flags_buff, 0);
     }
@@ -411,12 +412,6 @@ WinMain(
             &context
         );
 
-        ID3D11Resource *backbuffer = 0;
-        ID3D11RenderTargetView *render_target_rgb = 0;
-        swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void **)&backbuffer);
-        device->CreateRenderTargetView(backbuffer, 0, &render_target_rgb);
-        context->OMSetRenderTargets(1, &render_target_rgb, 0);
-
         // ===========================================================
         // Viewport set-up
         // ===========================================================
@@ -428,6 +423,55 @@ WinMain(
         viewport.MinDepth = 0.f;
         viewport.MaxDepth = 1.f;
         context->RSSetViewports(1, &viewport);
+
+        // ===========================================================
+        // Depth and rgb buffers
+        // ===========================================================
+        // @todo: maybe 32 bits are too much
+        D3D11_DEPTH_STENCIL_VIEW_DESC depth_view_desc = {DXGI_FORMAT_D32_FLOAT, D3D11_DSV_DIMENSION_TEXTURE2D};
+
+        D3D11_TEXTURE2D_DESC depth_buffer_desc = {};
+        depth_buffer_desc.Width = global_width;
+        depth_buffer_desc.Height = global_height;
+        depth_buffer_desc.MipLevels = 1;
+        depth_buffer_desc.ArraySize = 1;
+        depth_buffer_desc.Format = DXGI_FORMAT_D32_FLOAT;
+        depth_buffer_desc.SampleDesc.Count = 1;
+        depth_buffer_desc.SampleDesc.Quality = 0;
+        depth_buffer_desc.Usage = D3D11_USAGE_DEFAULT;
+        depth_buffer_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+        depth_buffer_desc.MiscFlags = 0;
+
+        ID3D11Resource  *backbuffer = 0;
+        ID3D11Texture2D *depth_texture = 0;
+        ID3D11RenderTargetView *render_target_rgb = 0;
+        ID3D11DepthStencilView *render_target_depth = 0;
+
+        swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void **)&backbuffer);
+        device->CreateRenderTargetView(backbuffer, 0, &render_target_rgb);
+        device->CreateTexture2D(&depth_buffer_desc, 0, &depth_texture);
+
+        device->CreateDepthStencilView(depth_texture, &depth_view_desc, &render_target_depth);
+        //context->OMSetRenderTargets(1, &render_target_rgb, render_target_depth);
+
+        // ===========================================================
+        // Depth states
+        // ===========================================================
+        ID3D11DepthStencilState *depth_nostencil_state = 0;
+        D3D11_DEPTH_STENCIL_DESC depth_stencil_settings;
+        depth_stencil_settings.DepthEnable    = 1;
+        //depth_stencil_settings.DepthEnable    = 0;
+        depth_stencil_settings.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+        depth_stencil_settings.DepthFunc      = D3D11_COMPARISON_GREATER_EQUAL;
+        //depth_stencil_settings.DepthFunc      = D3D11_COMPARISON_ALWAYS;
+        depth_stencil_settings.StencilEnable  = 0;
+        depth_stencil_settings.StencilReadMask;
+        depth_stencil_settings.StencilWriteMask;
+        depth_stencil_settings.FrontFace      = {D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_COMPARISON_ALWAYS};
+        depth_stencil_settings.BackFace       = {D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_COMPARISON_ALWAYS};
+
+        device->CreateDepthStencilState(&depth_stencil_settings, &depth_nostencil_state);
+        //context->OMSetDepthStencilState(depth_nostencil_state, 1);
 
         // ===========================================================
         // Texture sampler set-up
@@ -464,29 +508,6 @@ WinMain(
         ID3D11RasterizerState *raster_state = 0;
         device->CreateRasterizerState(&raster_settings, &raster_state);
         context->RSSetState(raster_state);
-
-        // ===========================================================
-        // Depth states
-        // ===========================================================
-        //D3D11_DEPTH_STENCIL_VIEW_DESC depth_view_desc = {DXGI_FORMAT_D32_FLOAT, D3D11_DSV_DIMENSION_TEXTURE2D};
-        //d11->device->CreateRenderTargetView(d11->backbuffer, 0, &d11->render_target_rgb);
-        //d11->device->CreateDepthStencilView(depth_texture, &depth_view_desc, &d11->render_target_depth);
-
-        ID3D11DepthStencilState *nodepth_nostencil_state = 0;
-        D3D11_DEPTH_STENCIL_DESC depth_stencil_settings;
-        //depth_stencil_settings.DepthEnable    = 1;
-        depth_stencil_settings.DepthEnable    = 0;
-        depth_stencil_settings.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-        //depth_stencil_settings.DepthFunc      = D3D11_COMPARISON_LESS;
-        depth_stencil_settings.DepthFunc      = D3D11_COMPARISON_ALWAYS;
-        depth_stencil_settings.StencilEnable  = 0;
-        depth_stencil_settings.StencilReadMask;
-        depth_stencil_settings.StencilWriteMask;
-        depth_stencil_settings.FrontFace      = {D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_COMPARISON_ALWAYS};
-        depth_stencil_settings.BackFace       = {D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_COMPARISON_ALWAYS};
-
-        //device->CreateDepthStencilState(&depth_stencil_settings, &d11->depth_nostencil_state);
-        device->CreateDepthStencilState(&depth_stencil_settings, &nodepth_nostencil_state);
 
         // ===========================================================
         // alpha blending set-up
@@ -530,27 +551,27 @@ WinMain(
         r32 eps = 0.02f;
         r32 rounded_square[] = {
             1-eps,     0.f,  1.f, 0.f, 0.f,
-              0.f,     eps,  1.f, 0.f, 0.f,
-              eps,     1.f,  1.f, 0.f, 0.f,
+            0.f,     eps,  1.f, 0.f, 0.f,
+            eps,     1.f,  1.f, 0.f, 0.f,
 
-              eps,     1.f,  0.f, 1.f, 0.f,
-              1.f, 1.f-eps,  0.f, 1.f, 0.f,
+            eps,     1.f,  0.f, 1.f, 0.f,
+            1.f, 1.f-eps,  0.f, 1.f, 0.f,
             1-eps,     0.f,  0.f, 1.f, 0.f, 
 
             1-eps,     0.f,  0.f, 0.f, 1.f, 
-              eps,     0.f,  0.f, 0.f, 1.f, 
-              0.f,     eps,  0.f, 0.f, 1.f,
+            eps,     0.f,  0.f, 0.f, 1.f, 
+            0.f,     eps,  0.f, 0.f, 1.f,
 
-              0.f,     eps,  1.f, 1.f, 0.f,
-              0.f, 1.f-eps,  1.f, 1.f, 0.f,
-              eps,     1.f,  1.f, 1.f, 0.f,
+            0.f,     eps,  1.f, 1.f, 0.f,
+            0.f, 1.f-eps,  1.f, 1.f, 0.f,
+            eps,     1.f,  1.f, 1.f, 0.f,
 
-              eps,     1.f,  0.f, 1.f, 1.f,
+            eps,     1.f,  0.f, 1.f, 1.f,
             1-eps,     1.f,  0.f, 1.f, 1.f,
-              1.f, 1.f-eps,  0.f, 1.f, 1.f,
+            1.f, 1.f-eps,  0.f, 1.f, 1.f,
 
-              1.f, 1.f-eps,  1.f, 0.f, 1.f,
-              1.f,     eps,  1.f, 0.f, 1.f,
+            1.f, 1.f-eps,  1.f, 0.f, 1.f,
+            1.f,     eps,  1.f, 0.f, 1.f,
             1-eps,     0.f,  1.f, 0.f, 1.f
         };
 
@@ -569,8 +590,8 @@ WinMain(
         // Input Layout
         // ===========================================================
         D3D11_INPUT_ELEMENT_DESC in_desc[] = {
-                {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,    0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-                {"COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0},
+            {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,    0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+            {"COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0},
         };
         device->CreateInputLayout(in_desc, 2, vsh_file.data, vsh_file.size, &input_layout); 
 
@@ -588,7 +609,7 @@ WinMain(
         device->CreateBuffer(&cbuffer_desc, 0, &global_matrix_buff);
         context->VSSetConstantBuffers(0, 1, &global_matrix_buff);
 
-        cbuffer_desc.ByteWidth = max(sizeof(u32), 16);
+        cbuffer_desc.ByteWidth = max(2*sizeof(u32), 16);
         cbuffer_desc.Usage = D3D11_USAGE_DYNAMIC;
         cbuffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
         cbuffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -596,6 +617,7 @@ WinMain(
         cbuffer_desc.StructureByteStride = sizeof(u32);
         device->CreateBuffer(&cbuffer_desc, 0, &global_flags_buff);
         context->PSSetConstantBuffers(0, 1, &global_flags_buff);
+        context->VSSetConstantBuffers(1, 1, &global_flags_buff);  // @todo: make separate buffers for each shader
 
         MSG message = {};
         Input input = {};
@@ -692,12 +714,13 @@ WinMain(
                 input.drag_start = input.mouse;
             }
             // clearing frame
-            r32 clear_color[] = {0.04f, 0.03f, 0.07f, 1.f};
+            //r32 clear_color[] = {0.04f, 0.03f, 0.07f, 1.f};
+            r32 clear_color[] = {0.247f, 0.247f, 0.247f, 1.f};
             context->ClearRenderTargetView(render_target_rgb, clear_color);
+            context->ClearDepthStencilView(render_target_depth, D3D11_CLEAR_DEPTH, 0, 0);
 
-            // state settings, possibly redundant
-            context->OMSetRenderTargets(1, &render_target_rgb, 0);
-            context->OMSetDepthStencilState(nodepth_nostencil_state, 1);
+            context->OMSetRenderTargets(1, &render_target_rgb, render_target_depth);
+            context->OMSetDepthStencilState(depth_nostencil_state, 1);
 
             // shaders
             context->VSSetShader(vshader, 0, 0);
@@ -711,8 +734,9 @@ WinMain(
             start_window(&ui, &win[0]);
             if (button(&ui, "button"))
                 inform("Button pressed\n");
-            //end_window(&ui, &win[0]);
+            end_window(&ui);
             start_window(&ui, &win[1]);
+            end_window(&ui);
 
             // @todo, @cleanup: move this elsewhere?
             if (!ui.resize_win)
@@ -726,19 +750,19 @@ WinMain(
             last_performance_counter = current_performance_counter;
             //inform("Frametime: %f     FPS:%d\n", dtime, (u32)(1/dtime));
         }
-    }
-    else
-    {
-        // TODO: Logging
-        return 1;
-    }
+        }
+        else
+        {
+            // TODO: Logging
+            return 1;
+        }
 
-    if (global_error)
-    {
-        return 1;
-    }
-    else
-    {
-        return 0;
-    }
+        if (global_error)
+        {
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }
 }

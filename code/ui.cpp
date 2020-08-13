@@ -1,8 +1,14 @@
 #define FLAGS_MOUSE 0
+#define FLAGS_DEPTH 1
 #define FLAGS_MOUSE_INACTIVE 0
 #define FLAGS_MOUSE_HOT      1
 #define FLAGS_MOUSE_ACTIVE   2
 #define FLAGS_MOUSE_WINDOW_BACKGROUND 3
+#define FLAGS_DEPTH_0 0
+#define FLAGS_DEPTH_1 1
+#define FLAGS_DEPTH_2 2
+#define FLAGS_DEPTH_3 3
+#define FLAGS_DEPTH_4 4
 
 struct Ui_Window
 {
@@ -73,12 +79,14 @@ void start_window(Ui *ui, Ui_Window *win)
         win->size.y = 0.2f;
     //win->size.x /= ((r32)WIDTH/(r32)HEIGHT);
 
-    if ((Abs(ui->input->mouse.x - win->pos.x - win->size.x) < 0.05f) &&
-        (Abs(ui->input->mouse.y - win->pos.y - win->size.y) < 0.05f))
+    if ((Abs(ui->input->mouse.x - win->pos.x - win->size.x) < 0.01f) &&
+        (Abs(ui->input->mouse.y - win->pos.y - win->size.y) < 0.01f))
     {
         win32_debug_set_cursor(CURSOR_RESIZE);
         ui->resize_win = win;
     }
+    else if ((ui->resize_win == win) && !ui->input->lmouse_down)
+        ui->resize_win = 0;
     if ((ui->input->mouse.x > win->pos.x) &&
         (ui->input->mouse.x < win->pos.x + win->size.x) &&
         (ui->input->mouse.y > win->pos.y) &&
@@ -93,6 +101,26 @@ void start_window(Ui *ui, Ui_Window *win)
         ui->resize_win = 0;
     }
 
+    //if (ui->input->lmouse_down) {
+    //    if (ui->drag_win == win) {
+    //        win->pos += ui->input->drag_delta;
+    //    }
+    //    else if (ui->resize_win == win) {
+    //        win->size += ui->input->drag_delta;
+    //    }
+    //}
+
+
+    ui->drawing_win = win;
+    // @cleanup: find another way for ar correction
+    //win->size.x *= ((r32)WIDTH/(r32)HEIGHT);
+}
+
+void end_window(Ui *ui)
+{
+    Ui_Window *win = ui->drawing_win;
+    ui->drawing_win = 0;
+    
     if (ui->input->lmouse_down) {
         if (ui->drag_win == win) {
             win->pos += ui->input->drag_delta;
@@ -102,12 +130,8 @@ void start_window(Ui *ui, Ui_Window *win)
         }
     }
 
-    u32 flag = FLAGS_MOUSE_WINDOW_BACKGROUND;
-    draw_square(win->pos, win->size, &flag);
-
-    ui->drawing_win = win;
-    // @cleanup: find another way for ar correction
-    //win->size.x *= ((r32)WIDTH/(r32)HEIGHT);
+    u32 flags[] = {FLAGS_MOUSE_WINDOW_BACKGROUND, FLAGS_DEPTH_0};
+    draw_square(win->pos, win->size, flags);
 }
 
 // @todo: maybe if user clicks, then leaves the button, but without
@@ -146,12 +170,12 @@ button(Ui *ui, char *label)
         if (ui->active == hash)  ui->active = 0;
     }
 
-    u32 flag = FLAGS_MOUSE_INACTIVE;
+    u32 flags[] = {FLAGS_MOUSE_INACTIVE, FLAGS_DEPTH_1};
     if (ui->active == hash)
-        flag = FLAGS_MOUSE_ACTIVE;
+        flags[0] = FLAGS_MOUSE_ACTIVE;
     else if (ui->hot == hash)
-        flag = FLAGS_MOUSE_HOT;
-    draw_square(pos, size, &flag);
+        flags[0] = FLAGS_MOUSE_HOT;
+    draw_square(pos, size, flags);
 
     return result;
 }
