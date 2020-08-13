@@ -8,6 +8,11 @@
 #define DEPTH_3 3
 #define DEPTH_4 4
 
+#define CLEAR_COLOR      0x3F3F3FFF  // 0xRRGGBBAA
+#define COLOR_BACKGROUND 0xCCCCCCFF
+#define COLOR_BUTTON     CLEAR_COLOR
+#define hex_to_rgba(hex) float4((float)(((hex) & 0xFF000000) >> 24) / 255.f, (float)(((hex) & 0x00FF0000) >> 16) / 255.f, (float)(((hex) & 0x0000FF00) >> 8) / 255.f, (float)((hex) & 0x000000FF) / 255.f);
+
 cbuffer flags
 {
     uint mouse;
@@ -47,7 +52,7 @@ VS_OUTPUT main(VS_INPUT input)
 
 float4 main(VS_OUTPUT input) : SV_TARGET
 {
-    float4 color = float4(0.4f, 0.8f, 0.5f, 1.f);
+    float4 color = hex_to_rgba(COLOR_BUTTON);
     if (mouse == MOUSE_HOT) {
         color = float4(0.3f, 0.8f, 0.5f, 1.f);
     }
@@ -55,7 +60,7 @@ float4 main(VS_OUTPUT input) : SV_TARGET
         color = float4(0.2f, 0.6f, 0.3f, 1.f);
     }
     else if (mouse == MOUSE_STUB) {
-        color = float4(0.3f, 0.3f, 0.3f, 1.f);
+        color = hex_to_rgba(COLOR_BACKGROUND);
     }
     //color = float4(0.8*input.col, 1.f);
     //float4 output = color*font.Sample(texture_sampler_state, input.txc);

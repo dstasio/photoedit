@@ -10,6 +10,9 @@
 #define FLAGS_DEPTH_3 3
 #define FLAGS_DEPTH_4 4
 
+#define CLEAR_COLOR 0x3F3F3FFF  // 0xRRGGBBAA
+#define hex_to_rgba(hex) {(r32)(((hex) & 0xFF000000) >> 24) / 255.f, (r32)(((hex) & 0x00FF0000) >> 16) / 255.f, (r32)(((hex) & 0x0000FF00) >> 8) / 255.f, (r32)((hex) & 0x000000FF) / 255.f};
+
 struct Ui_Window
 {
     u32 item_index;

@@ -428,6 +428,11 @@ WinMain(
         // Depth and rgb buffers
         // ===========================================================
         // @todo: maybe 32 bits are too much
+        ID3D11Resource  *backbuffer = 0;
+        ID3D11Texture2D *depth_texture = 0;
+        ID3D11RenderTargetView *render_target_rgb   = 0;
+        ID3D11DepthStencilView *render_target_depth = 0;
+
         D3D11_DEPTH_STENCIL_VIEW_DESC depth_view_desc = {DXGI_FORMAT_D32_FLOAT, D3D11_DSV_DIMENSION_TEXTURE2D};
 
         D3D11_TEXTURE2D_DESC depth_buffer_desc = {};
@@ -441,15 +446,10 @@ WinMain(
         depth_buffer_desc.Usage = D3D11_USAGE_DEFAULT;
         depth_buffer_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
         depth_buffer_desc.MiscFlags = 0;
-
-        ID3D11Resource  *backbuffer = 0;
-        ID3D11Texture2D *depth_texture = 0;
-        ID3D11RenderTargetView *render_target_rgb = 0;
-        ID3D11DepthStencilView *render_target_depth = 0;
+        device->CreateTexture2D(&depth_buffer_desc, 0, &depth_texture);
 
         swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void **)&backbuffer);
         device->CreateRenderTargetView(backbuffer, 0, &render_target_rgb);
-        device->CreateTexture2D(&depth_buffer_desc, 0, &depth_texture);
 
         device->CreateDepthStencilView(depth_texture, &depth_view_desc, &render_target_depth);
         //context->OMSetRenderTargets(1, &render_target_rgb, render_target_depth);
@@ -714,8 +714,8 @@ WinMain(
                 input.drag_start = input.mouse;
             }
             // clearing frame
-            //r32 clear_color[] = {0.04f, 0.03f, 0.07f, 1.f};
-            r32 clear_color[] = {0.247f, 0.247f, 0.247f, 1.f};
+            //r32 clear_color[] = {0.247f, 0.247f, 0.247f, 1.f};
+            r32 clear_color[] = hex_to_rgba(CLEAR_COLOR);
             context->ClearRenderTargetView(render_target_rgb, clear_color);
             context->ClearDepthStencilView(render_target_depth, D3D11_CLEAR_DEPTH, 0, 0);
 
