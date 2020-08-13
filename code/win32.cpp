@@ -726,17 +726,14 @@ WinMain(
             context->VSSetShader(vshader, 0, 0);
             context->PSSetShader(pshader, 0, 0);
 
-            local_persist Ui_Window win[2] = {
-                {0, { 0.f,  0.f}, {0.3f, 0.3f}},
-                {0, {0.5f, 0.4f}, {0.4f, 0.4f}}
-            };
+            local_persist Ui_Window win[2] = {};
 
             start_window(&ui, &win[0]);
-            if (button(&ui, "button"))
-                inform("Button pressed\n");
-            end_window(&ui);
-            start_window(&ui, &win[1]);
-            end_window(&ui);
+            //if (button(&ui, "button"))
+            //    inform("Button pressed\n");
+            //end_window(&ui);
+            //start_window(&ui, &win[1]);
+            //end_window(&ui);
 
             // @todo, @cleanup: move this elsewhere?
             if (!ui.resize_win)

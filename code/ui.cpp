@@ -13,12 +13,16 @@
 #define CLEAR_COLOR 0x3F3F3FFF  // 0xRRGGBBAA
 #define hex_to_rgba(hex) {(r32)(((hex) & 0xFF000000) >> 24) / 255.f, (r32)(((hex) & 0x00FF0000) >> 16) / 255.f, (r32)(((hex) & 0x0000FF00) >> 8) / 255.f, (r32)((hex) & 0x000000FF) / 255.f};
 
+#define WINDOW_MARGIN 0.005f
+
 struct Ui_Window
 {
     u32 item_index;
 
-    v2 pos;
-    v2 size;
+    Ui_Window *left;
+    Ui_Window *right;
+    Ui_Window *top;
+    Ui_Window *bottom;
 };
 
 struct Ui
@@ -76,69 +80,77 @@ u32 get_hash(char *s)
 // @todo: fix corners when resizing
 void start_window(Ui *ui, Ui_Window *win)
 {
-    if (win->size.x == 0)
-        win->size.x = 0.2f;
-    if (win->size.y == 0)
-        win->size.y = 0.2f;
-    //win->size.x /= ((r32)WIDTH/(r32)HEIGHT);
+    v2 top_left  = {};
+    v2 bot_right = {};
 
-    if ((Abs(ui->input->mouse.x - win->pos.x - win->size.x) < 0.01f) &&
-        (Abs(ui->input->mouse.y - win->pos.y - win->size.y) < 0.01f))
-    {
-        win32_debug_set_cursor(CURSOR_RESIZE);
-        ui->resize_win = win;
-    }
-    else if ((ui->resize_win == win) && !ui->input->lmouse_down)
-        ui->resize_win = 0;
-    if ((ui->input->mouse.x > win->pos.x) &&
-        (ui->input->mouse.x < win->pos.x + win->size.x) &&
-        (ui->input->mouse.y > win->pos.y) &&
-        (ui->input->mouse.y < win->pos.y + win->size.y) &&
-        !ui->resize_win)
-    {
-        if (ui->input->lmouse_down)
-            ui->drag_win = win;
-    }
-    if (ui->input->lmouse_up) {
-        ui->drag_win = 0;
-        ui->resize_win = 0;
+    if (win->left) { }
+    else {
+        top_left.x = WINDOW_MARGIN;
     }
 
-    //if (ui->input->lmouse_down) {
-    //    if (ui->drag_win == win) {
-    //        win->pos += ui->input->drag_delta;
-    //    }
-    //    else if (ui->resize_win == win) {
-    //        win->size += ui->input->drag_delta;
-    //    }
+    if (win->top) { }
+    else {
+        top_left.y = 0.04f;
+    }
+
+    if (win->bottom) { }
+    else {
+        bot_right.y = 1.f - WINDOW_MARGIN;
+    }
+
+    if (win->right) { }
+    else {
+        bot_right.x = ((r32)global_width/(r32)global_height) - WINDOW_MARGIN;
+    }
+
+    //if ((Abs(ui->input->mouse.x - win->pos.x - win->size.x) < 0.01f) &&
+    //    (Abs(ui->input->mouse.y - win->pos.y - win->size.y) < 0.01f))
+    //{
+    //    win32_debug_set_cursor(CURSOR_RESIZE);
+    //    ui->resize_win = win;
+    //}
+    //else if ((ui->resize_win == win) && !ui->input->lmouse_down)
+    //    ui->resize_win = 0;
+    //if ((ui->input->mouse.x > win->pos.x) &&
+    //    (ui->input->mouse.x < win->pos.x + win->size.x) &&
+    //    (ui->input->mouse.y > win->pos.y) &&
+    //    (ui->input->mouse.y < win->pos.y + win->size.y) &&
+    //    !ui->resize_win)
+    //{
+    //    if (ui->input->lmouse_down)
+    //        ui->drag_win = win;
+    //}
+    //if (ui->input->lmouse_up) {
+    //    ui->drag_win = 0;
+    //    ui->resize_win = 0;
     //}
 
-
-    ui->drawing_win = win;
-    // @cleanup: find another way for ar correction
-    //win->size.x *= ((r32)WIDTH/(r32)HEIGHT);
-}
-
-void end_window(Ui *ui)
-{
-    Ui_Window *win = ui->drawing_win;
-    ui->drawing_win = 0;
-    
-    if (ui->input->lmouse_down) {
-        if (ui->drag_win == win) {
-            win->pos += ui->input->drag_delta;
-        }
-        else if (ui->resize_win == win) {
-            win->size += ui->input->drag_delta;
-        }
-    }
-
     u32 flags[] = {FLAGS_MOUSE_WINDOW_BACKGROUND, FLAGS_DEPTH_0};
-    draw_square(win->pos, win->size, flags);
+    draw_square(top_left, bot_right - top_left, flags);
+    ui->drawing_win = win;
 }
+
+//void end_window(Ui *ui)
+//{
+//    Ui_Window *win = ui->drawing_win;
+//    ui->drawing_win = 0;
+//    
+//    if (ui->input->lmouse_down) {
+//        if (ui->drag_win == win) {
+//            win->pos += ui->input->drag_delta;
+//        }
+//        else if (ui->resize_win == win) {
+//            win->size += ui->input->drag_delta;
+//        }
+//    }
+//
+//    u32 flags[] = {FLAGS_MOUSE_WINDOW_BACKGROUND, FLAGS_DEPTH_0};
+//    draw_square(win->pos, win->size, flags);
+//}
 
 // @todo: maybe if user clicks, then leaves the button, but without
 // releasing hovers the button again it should activate?
+#if 0
 b32
 button(Ui *ui, char *label)
 {
@@ -182,4 +194,4 @@ button(Ui *ui, char *label)
 
     return result;
 }
-
+#endif
