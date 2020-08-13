@@ -17,12 +17,16 @@
 
 struct Ui_Window
 {
+    v2 min;
+    v2 max;
     u32 item_index;
 
-    Ui_Window *left;
-    Ui_Window *right;
     Ui_Window *top;
+    Ui_Window *left;
     Ui_Window *bottom;
+    Ui_Window *right;
+    r32 hor_weight;
+    r32 vert_weight;
 };
 
 struct Ui
@@ -80,27 +84,53 @@ u32 get_hash(char *s)
 // @todo: fix corners when resizing
 void start_window(Ui *ui, Ui_Window *win)
 {
-    v2 top_left  = {};
-    v2 bot_right = {};
+    v2 top_left  = {
+        WINDOW_MARGIN*2.f,
+        0.04f
+    };
+    v2 bot_right = {
+        ((r32)global_width/(r32)global_height) - WINDOW_MARGIN*2.f,
+        1.f - WINDOW_MARGIN*2.f
+    };
 
-    if (win->left) { }
-    else {
-        top_left.x = WINDOW_MARGIN;
+    if (win->left) {
+        if (!win->left->hor_weight)
+            win->left->hor_weight = 0.5f;
+        if (win->left->right != win)
+            win->left->right = win;
+
+        r32 inv_weight = win->left->hor_weight;
+        top_left.x += inv_weight*(bot_right.x-top_left.x) + WINDOW_MARGIN;
     }
 
-    if (win->top) { }
-    else {
-        top_left.y = 0.04f;
+    if (win->top) {
+        if (win->top->bottom != win)
+            win->top->bottom = win;
+        if (!win->top->vert_weight)
+            win->top->vert_weight = 0.5f;
+
+        r32 inv_weight = win->top->vert_weight;
+        top_left.y += inv_weight*(bot_right.y-top_left.y) + WINDOW_MARGIN;
     }
 
-    if (win->bottom) { }
-    else {
-        bot_right.y = 1.f - WINDOW_MARGIN;
+    if (win->bottom) {
+        if (win->bottom->top != win)
+            win->bottom->top = win;
+        if (!win->vert_weight)
+            win->vert_weight = 0.5f;
+
+        r32 inv_weight = win->vert_weight;
+        bot_right.y -= inv_weight*(bot_right.y-top_left.y) + WINDOW_MARGIN;
     }
 
-    if (win->right) { }
-    else {
-        bot_right.x = ((r32)global_width/(r32)global_height) - WINDOW_MARGIN;
+    if (win->right) {
+        if (win->right->left != win)
+            win->right->left = win;
+        if (!win->hor_weight)
+            win->hor_weight = 0.5f;
+
+        r32 inv_weight = win->hor_weight;
+        bot_right.x -= inv_weight*(bot_right.x-top_left.x) + WINDOW_MARGIN;
     }
 
     //if ((Abs(ui->input->mouse.x - win->pos.x - win->size.x) < 0.01f) &&

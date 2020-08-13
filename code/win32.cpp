@@ -753,18 +753,24 @@ WinMain(
             context->VSSetShader(vshader, 0, 0);
             context->PSSetShader(pshader, 0, 0);
 
-            local_persist Ui_Window win[2] = {};
+            local_persist Ui_Window win[4] = {};
+            Ui_Window *TL = &win[0];
+            Ui_Window *TR = &win[1];
+            Ui_Window *BL = &win[2];
+            Ui_Window *BR = &win[3];
+            TL->right = TR;
+            TL->bottom = BL;
+            TR->bottom = BR;
+            BL->right = BR;
 
+            start_window(&ui, &win[3]);
             start_window(&ui, &win[0]);
-            //if (button(&ui, "button"))
-            //    inform("Button pressed\n");
-            //end_window(&ui);
-            //start_window(&ui, &win[1]);
-            //end_window(&ui);
+            start_window(&ui, &win[1]);
+            start_window(&ui, &win[2]);
 
             // @todo, @cleanup: move this elsewhere?
-            if (!ui.resize_win)
-                win32_debug_set_cursor(CURSOR_ARROW);
+            //if (!ui.resize_win)
+            //    win32_debug_set_cursor(CURSOR_ARROW);
 
             swap_chain->Present(1, 0);
 
