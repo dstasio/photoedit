@@ -1,14 +1,17 @@
-#define FLAGS_MOUSE 0
+#define FLAGS_COLOR 0
 #define FLAGS_DEPTH 1
-#define FLAGS_MOUSE_INACTIVE 0
-#define FLAGS_MOUSE_HOT      1
-#define FLAGS_MOUSE_ACTIVE   2
-#define FLAGS_MOUSE_WINDOW_BACKGROUND 3
-#define FLAGS_DEPTH_0 0
-#define FLAGS_DEPTH_1 1
-#define FLAGS_DEPTH_2 2
-#define FLAGS_DEPTH_3 3
-#define FLAGS_DEPTH_4 4
+
+#define FLAG_COLOR_INACTIVE   0
+#define FLAG_COLOR_HOT        1
+#define FLAG_COLOR_ACTIVE     2
+#define FLAG_COLOR_BACKGROUND 3
+#define FLAG_COLOR_TEXTURE    4
+
+#define FLAG_DEPTH_0 0
+#define FLAG_DEPTH_1 1
+#define FLAG_DEPTH_2 2
+#define FLAG_DEPTH_3 3
+#define FLAG_DEPTH_4 4
 
 #define CLEAR_COLOR 0x3F3F3FFF  // 0xRRGGBBAA
 #define hex_to_rgba(hex) {(r32)(((hex) & 0xFF000000) >> 24) / 255.f, (r32)(((hex) & 0x00FF0000) >> 16) / 255.f, (r32)(((hex) & 0x0000FF00) >> 8) / 255.f, (r32)((hex) & 0x000000FF) / 255.f};
@@ -149,7 +152,7 @@ void start_window(Ui *ui, Ui_Window *win)
     //    ui->resize_win = 0;
     //}
 
-    u32 flags[] = {FLAGS_MOUSE_WINDOW_BACKGROUND, FLAGS_DEPTH_0};
+    u32 flags[] = {FLAG_COLOR_BACKGROUND, FLAG_DEPTH_0};
     draw_square(top_left, bot_right - top_left, flags);
     ui->drawing_win = win;
 

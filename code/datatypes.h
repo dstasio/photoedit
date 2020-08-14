@@ -5,10 +5,10 @@
 #define internal static
 #define local_persist static
 
-#define Kilobytes(k) (1024LL*(k))
-#define Megabytes(m) (1024LL*Kilobytes(m))
-#define Gigabytes(g) (1024LL*Megabytes(g))
-#define Terabytes(t) (1024LL*Gigabytes(t))
+#define kilobytes(k) (1024LL*(k))
+#define megabytes(m) (1024LL*kilobytes(m))
+#define gigabytes(g) (1024LL*megabytes(g))
+#define terabytes(t) (1024LL*gigabytes(t))
 
 typedef uint8_t  u8;
 typedef uint16_t u16;

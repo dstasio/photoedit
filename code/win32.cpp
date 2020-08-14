@@ -15,6 +15,7 @@
 #include "datatypes.h"
 #include "phe_math.h"
 #include <stdio.h>
+#include "headers.h"
 
 #if PHE_INTERNAL
 #define output_string(s, ...)        {char Buffer[100];sprintf_s(Buffer, s, __VA_ARGS__);OutputDebugStringA(Buffer);}
@@ -76,7 +77,6 @@ global ID3D11DeviceContext    *context;
 global ID3D11Buffer           *vbuffer = 0;
 global ID3D11InputLayout      *input_layout = 0;
 
-
 inline u64
 win32_get_last_write_time(char *Path)
 {
@@ -132,11 +132,11 @@ PLATFORM_READ_FILE(win32_read_file)
 
     if (FileHandle != INVALID_HANDLE_VALUE)
     {
-        // TODO(dave): Currently only supports up to 4GB files
+        // @todo: Currently only supports up to 4GB files
         u32 FileSize = GetFileSize(FileHandle, 0);
         DWORD BytesRead;
 
-        // TODO(dave): Remove this allocation
+        // @todo: Remove this allocation
         u8 *Buffer = (u8 *)VirtualAlloc(0, FileSize, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
         if(ReadFile(FileHandle, Buffer, FileSize, &BytesRead, 0))
         {
@@ -194,6 +194,50 @@ PLATFORM_RELOAD_CHANGED_FILE(win32_reload_file_if_changed)
     }
 
     return(has_changed);
+}
+
+Platform_Read_File *platform_read_file = win32_read_file;
+#include "base.cpp"
+
+struct Platform_Texture
+{
+    void *handle;
+    void *platform;
+
+    Image image;
+};
+
+internal Platform_Texture
+win32_load_texture(char *path)
+{
+    Platform_Texture result = {};
+    result.image = load_bitmap(path);
+    D3D11_TEXTURE2D_DESC tex_desc = {};
+    tex_desc.Width              = result.image.width;
+    tex_desc.Height             = result.image.height;
+    tex_desc.MipLevels          = 0;
+    tex_desc.ArraySize          = 1;
+    tex_desc.Format             = DXGI_FORMAT_R8G8B8A8_UNORM;
+    tex_desc.SampleDesc.Count   = 1;
+    tex_desc.SampleDesc.Quality = 0;
+    tex_desc.Usage              = D3D11_USAGE_DEFAULT;
+    tex_desc.BindFlags          = D3D11_BIND_SHADER_RESOURCE|D3D11_BIND_RENDER_TARGET;
+    tex_desc.CPUAccessFlags     = D3D11_CPU_ACCESS_WRITE;
+    tex_desc.MiscFlags          = D3D11_RESOURCE_MISC_GENERATE_MIPS;
+
+    device->CreateTexture2D(&tex_desc, 0, (ID3D11Texture2D **)&result.handle);
+    device->CreateShaderResourceView((ID3D11Resource *)result.handle, 0, (ID3D11ShaderResourceView **)&result.platform);
+    context->UpdateSubresource((ID3D11Resource *)result.handle, 0, 0, result.image.bytes, result.image.width*4, 0);
+    context->GenerateMips((ID3D11ShaderResourceView *)result.platform);
+    mempool_pop_last;
+
+    return result;
+}
+
+inline void
+set_active_texture(Platform_Texture *texture)
+{
+    context->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView **)&texture->platform); 
 }
 
 inline void
@@ -423,10 +467,13 @@ WinMain(
         u32 window_height = window_rect.bottom - window_rect.top;
 
 #if PHE_INTERNAL
-        LPVOID base_address = (LPVOID)Terabytes(2);
+        LPVOID base_address = (LPVOID)terabytes(2);
 #else
         LPVOID base_address = 0;
 #endif
+        mempool.size = megabytes(500);
+        mempool.base = (u8 *)VirtualAlloc(base_address, mempool.size, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);;
+
         global_running = true;
         //
         //
@@ -502,23 +549,6 @@ WinMain(
         device->CreateDepthStencilState(&depth_stencil_settings, &state_dgequal_sequal);
 
         // ===========================================================
-        // Texture sampler set-up
-        // ===========================================================
-        ID3D11SamplerState *sampler;
-        D3D11_SAMPLER_DESC sampler_desc = {};
-        sampler_desc.Filter = D3D11_FILTER_ANISOTROPIC;//D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-        sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_MIRROR;
-        sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_MIRROR;
-        sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_MIRROR;
-        sampler_desc.MipLODBias = -1;
-        sampler_desc.MaxAnisotropy = 16;
-        sampler_desc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
-        sampler_desc.MinLOD = 0;
-        sampler_desc.MaxLOD = 100;
-        device->CreateSamplerState(&sampler_desc, &sampler);
-        context->PSSetSamplers(0, 1, &sampler);
-
-        // ===========================================================
         // rasterizer set-up
         // ===========================================================
         D3D11_RASTERIZER_DESC raster_settings = {};
@@ -536,6 +566,23 @@ WinMain(
         ID3D11RasterizerState *raster_state = 0;
         device->CreateRasterizerState(&raster_settings, &raster_state);
         context->RSSetState(raster_state);
+
+        // ===========================================================
+        // texture sampler set-up
+        // ===========================================================
+        ID3D11SamplerState *sampler;
+        D3D11_SAMPLER_DESC sampler_desc = {};
+        sampler_desc.Filter = D3D11_FILTER_ANISOTROPIC;//D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+        sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_MIRROR;
+        sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_MIRROR;
+        sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_MIRROR;
+        sampler_desc.MipLODBias = -1;
+        sampler_desc.MaxAnisotropy = 16;
+        sampler_desc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+        sampler_desc.MinLOD = 0;
+        sampler_desc.MaxLOD = 100;
+        device->CreateSamplerState(&sampler_desc, &sampler);
+        context->PSSetSamplers(0, 1, &sampler);
 
         // ===========================================================
         // alpha blending set-up
@@ -646,6 +693,8 @@ WinMain(
         device->CreateBuffer(&cbuffer_desc, 0, &global_flags_buff);
         context->PSSetConstantBuffers(0, 1, &global_flags_buff);
         context->VSSetConstantBuffers(1, 1, &global_flags_buff);  // @todo: make separate buffers for each shader
+
+        Platform_Texture canvas_image = win32_load_texture("sampletexture.bmp");
 
         MSG message = {};
         Input input = {};
@@ -762,8 +811,9 @@ WinMain(
             // Canvas contents
             context->OMSetDepthStencilState(state_dgequal_sequal, 1);
 
-            u32 flags[] = {FLAGS_MOUSE_ACTIVE, FLAGS_DEPTH_1};
-            draw_square({}, make_v2(1.f), flags);
+            set_active_texture(&canvas_image);
+            u32 flags[] = {FLAG_COLOR_TEXTURE, FLAG_DEPTH_1};
+            draw_square({}, {(r32)canvas_image.image.width / (r32)canvas_image.image.height, (r32)canvas_image.image.height / (r32)canvas_image.image.height}, flags);
 
 
 
@@ -775,19 +825,19 @@ WinMain(
             last_performance_counter = current_performance_counter;
             //inform("Frametime: %f     FPS:%d\n", dtime, (u32)(1/dtime));
         }
-        }
-        else
-        {
-            // TODO: Logging
-            return 1;
-        }
+    }
+    else
+    {
+        // TODO: Logging
+        return 1;
+    }
 
-        if (global_error)
-        {
-            return 1;
-        }
-        else
-        {
-            return 0;
-        }
+    if (global_error)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
 }

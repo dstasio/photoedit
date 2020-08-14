@@ -57,7 +57,9 @@ badd +26 build.bat
 badd +1 win32.cpp
 badd +37 ui.hlsl
 badd +24 phe_math.h
-badd +130 ui.cpp
+badd +97 ui.cpp
+badd +1 base.cpp
+badd +1 base.h
 argglobal
 silent! argdel *
 edit win32.cpp
@@ -70,8 +72,8 @@ set nosplitbelow
 set nosplitright
 wincmd t
 set winminheight=1 winheight=1 winminwidth=1 winwidth=1
-exe 'vert 1resize ' . ((&columns * 115 + 116) / 232)
-exe 'vert 2resize ' . ((&columns * 116 + 116) / 232)
+exe 'vert 1resize ' . ((&columns * 116 + 116) / 232)
+exe 'vert 2resize ' . ((&columns * 115 + 116) / 232)
 argglobal
 setlocal keymap=
 setlocal noarabic
@@ -190,15 +192,15 @@ set nowrap
 setlocal nowrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 714 - ((25 * winheight(0) + 26) / 53)
+let s:l = 176 - ((21 * winheight(0) + 26) / 53)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-714
-normal! 014|
+176
+normal! 09|
 wincmd w
 argglobal
-if bufexists('ui.cpp') | buffer ui.cpp | else | edit ui.cpp | endif
+if bufexists('base.cpp') | buffer base.cpp | else | edit base.cpp | endif
 setlocal keymap=
 setlocal noarabic
 setlocal autoindent
@@ -316,16 +318,16 @@ set nowrap
 setlocal nowrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 111 - ((33 * winheight(0) + 26) / 53)
+let s:l = 1 - ((0 * winheight(0) + 26) / 53)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-111
+1
 normal! 0
 wincmd w
 2wincmd w
-exe 'vert 1resize ' . ((&columns * 115 + 116) / 232)
-exe 'vert 2resize ' . ((&columns * 116 + 116) / 232)
+exe 'vert 1resize ' . ((&columns * 116 + 116) / 232)
+exe 'vert 2resize ' . ((&columns * 115 + 116) / 232)
 tabnext 1
 if exists('s:wipebuf') && s:wipebuf != bufnr('%')
   silent exe 'bwipe ' . s:wipebuf
