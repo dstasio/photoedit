@@ -68,7 +68,7 @@ global u32 global_height = 720;
 
 global IDXGISwapChain         *swap_chain;
 global ID3D11RenderTargetView *render_target_rgb;
-global ID3D11DepthStencilView *render_target_depth;
+global ID3D11DepthStencilView *render_target_depthstencil;
 global ID3D11Buffer           *global_matrix_buff;
 global ID3D11Buffer           *global_flags_buff;
 global ID3D11Device           *device;
@@ -203,37 +203,36 @@ resize_render_targets(ID3D11RenderTargetView **rgb, ID3D11DepthStencilView **dep
         context->OMSetRenderTargets(0, 0, 0);
         if (render_target_rgb)
             render_target_rgb->Release();
-        if (render_target_depth)
-            render_target_depth->Release();
+        if (render_target_depthstencil)
+            render_target_depthstencil->Release();
 
         swap_chain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
 
         ID3D11Resource  *backbuffer = 0;
-        ID3D11Texture2D *depth_texture = 0;
+        ID3D11Texture2D *depth_stencil_texture = 0;
 
-        // @todo: maybe 32 bits are too much
-        D3D11_DEPTH_STENCIL_VIEW_DESC depth_view_desc = {DXGI_FORMAT_D32_FLOAT, D3D11_DSV_DIMENSION_TEXTURE2D};
-
-        D3D11_TEXTURE2D_DESC depth_buffer_desc = {};
-        depth_buffer_desc.Width = global_width;
-        depth_buffer_desc.Height = global_height;
-        depth_buffer_desc.MipLevels = 1;
-        depth_buffer_desc.ArraySize = 1;
-        depth_buffer_desc.Format = DXGI_FORMAT_D32_FLOAT;
-        depth_buffer_desc.SampleDesc.Count = 1;
-        depth_buffer_desc.SampleDesc.Quality = 0;
-        depth_buffer_desc.Usage = D3D11_USAGE_DEFAULT;
-        depth_buffer_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-        depth_buffer_desc.MiscFlags = 0;
-        device->CreateTexture2D(&depth_buffer_desc, 0, &depth_texture);
+        // @todo: look at multisampling for dsv_dimension, might be useful
+        D3D11_DEPTH_STENCIL_VIEW_DESC depth_view_desc = {DXGI_FORMAT_D24_UNORM_S8_UINT, D3D11_DSV_DIMENSION_TEXTURE2D};
+        D3D11_TEXTURE2D_DESC depth_stencil_desc = {};
+        depth_stencil_desc.Width = global_width;
+        depth_stencil_desc.Height = global_height;
+        depth_stencil_desc.MipLevels = 1;
+        depth_stencil_desc.ArraySize = 1;
+        depth_stencil_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+        //depth_stencil_desc.Format = DXGI_FORMAT_D32_FLOAT;
+        depth_stencil_desc.SampleDesc.Count = 1;
+        depth_stencil_desc.SampleDesc.Quality = 0;
+        depth_stencil_desc.Usage = D3D11_USAGE_DEFAULT;
+        depth_stencil_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+        depth_stencil_desc.MiscFlags = 0;
+        device->CreateTexture2D(&depth_stencil_desc, 0, &depth_stencil_texture);
 
         swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void **)&backbuffer);
         device->CreateRenderTargetView(backbuffer, 0, rgb);
 
-        device->CreateDepthStencilView(depth_texture, &depth_view_desc, depth);
+        device->CreateDepthStencilView(depth_stencil_texture, &depth_view_desc, depth);
         backbuffer->Release();
-        // @todo: can I release the depth texture?
-        depth_texture->Release();
+        depth_stencil_texture->Release();
 
         // ===========================================================
         // Viewport set-up
@@ -284,7 +283,7 @@ LRESULT CALLBACK window_proc(
             global_width = LOWORD(l);
             global_height = HIWORD(l);
 
-            resize_render_targets(&render_target_rgb, &render_target_depth);
+            resize_render_targets(&render_target_rgb, &render_target_depthstencil);
         } break;
 
         default:
@@ -479,26 +478,28 @@ WinMain(
         // ===========================================================
         // Depth and rgb buffers
         // ===========================================================
-        resize_render_targets(&render_target_rgb, &render_target_depth);
+        resize_render_targets(&render_target_rgb, &render_target_depthstencil);
 
         // ===========================================================
         // Depth states
         // ===========================================================
-        ID3D11DepthStencilState *depth_nostencil_state = 0;
+        ID3D11DepthStencilState *state_dgequal_snotequal = 0;
+        ID3D11DepthStencilState *state_dgequal_sequal = 0;
         D3D11_DEPTH_STENCIL_DESC depth_stencil_settings;
-        depth_stencil_settings.DepthEnable    = 1;
-        //depth_stencil_settings.DepthEnable    = 0;
-        depth_stencil_settings.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-        depth_stencil_settings.DepthFunc      = D3D11_COMPARISON_GREATER_EQUAL;
-        //depth_stencil_settings.DepthFunc      = D3D11_COMPARISON_ALWAYS;
-        depth_stencil_settings.StencilEnable  = 0;
-        depth_stencil_settings.StencilReadMask;
-        depth_stencil_settings.StencilWriteMask;
-        depth_stencil_settings.FrontFace      = {D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_COMPARISON_ALWAYS};
-        depth_stencil_settings.BackFace       = {D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_COMPARISON_ALWAYS};
+        depth_stencil_settings.DepthEnable      = 1;
+        depth_stencil_settings.DepthWriteMask   = D3D11_DEPTH_WRITE_MASK_ALL;
+        depth_stencil_settings.DepthFunc        = D3D11_COMPARISON_GREATER_EQUAL;
+        depth_stencil_settings.StencilEnable    = 1;
+        depth_stencil_settings.StencilReadMask  = 0xFF;
+        depth_stencil_settings.StencilWriteMask = 0xFF;
+        depth_stencil_settings.FrontFace        = {D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_REPLACE, D3D11_COMPARISON_NOT_EQUAL};
+        depth_stencil_settings.BackFace         = {D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_COMPARISON_NEVER};
+        device->CreateDepthStencilState(&depth_stencil_settings, &state_dgequal_snotequal);
 
-        device->CreateDepthStencilState(&depth_stencil_settings, &depth_nostencil_state);
-        //context->OMSetDepthStencilState(depth_nostencil_state, 1);
+        depth_stencil_settings.StencilEnable           = 1;
+        depth_stencil_settings.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+        depth_stencil_settings.FrontFace.StencilFunc   = D3D11_COMPARISON_EQUAL;
+        device->CreateDepthStencilState(&depth_stencil_settings, &state_dgequal_sequal);
 
         // ===========================================================
         // Texture sampler set-up
@@ -740,26 +741,31 @@ WinMain(
                 input.drag_delta = input.mouse - input.drag_start;
                 input.drag_start = input.mouse;
             }
-            // clearing frame
-            //r32 clear_color[] = {0.247f, 0.247f, 0.247f, 1.f};
+            local_persist Ui_Window win = {};
+
             r32 clear_color[] = hex_to_rgba(CLEAR_COLOR);
             context->ClearRenderTargetView(render_target_rgb, clear_color);
-            context->ClearDepthStencilView(render_target_depth, D3D11_CLEAR_DEPTH, 0, 0);
+            context->ClearDepthStencilView(render_target_depthstencil, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 0, 0);
+            context->OMSetRenderTargets(1, &render_target_rgb, render_target_depthstencil);
 
-            context->OMSetRenderTargets(1, &render_target_rgb, render_target_depth);
-            context->OMSetDepthStencilState(depth_nostencil_state, 1);
 
             // shaders
             context->VSSetShader(vshader, 0, 0);
             context->PSSetShader(pshader, 0, 0);
 
-            local_persist Ui_Window win = {};
-
+            // =======================================================
+            // Drawing canvas window
+            // =======================================================
+            context->OMSetDepthStencilState(state_dgequal_snotequal, 1);
             start_window(&ui, &win);
 
-            // @todo, @cleanup: move this elsewhere?
-            //if (!ui.resize_win)
-            //    win32_debug_set_cursor(CURSOR_ARROW);
+            // Canvas contents
+            context->OMSetDepthStencilState(state_dgequal_sequal, 1);
+
+            u32 flags[] = {FLAGS_MOUSE_ACTIVE, FLAGS_DEPTH_1};
+            draw_square({}, make_v2(1.f), flags);
+
+
 
             swap_chain->Present(1, 0);
 
