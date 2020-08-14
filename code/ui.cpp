@@ -94,23 +94,17 @@ void start_window(Ui *ui, Ui_Window *win)
     };
 
     if (win->left) {
-        if (!win->left->hor_weight)
-            win->left->hor_weight = 0.5f;
         if (win->left->right != win)
             win->left->right = win;
 
-        r32 inv_weight = win->left->hor_weight;
-        top_left.x += inv_weight*(bot_right.x-top_left.x) + WINDOW_MARGIN;
+        top_left.x = win->left->max.x + WINDOW_MARGIN;
     }
 
     if (win->top) {
         if (win->top->bottom != win)
             win->top->bottom = win;
-        if (!win->top->vert_weight)
-            win->top->vert_weight = 0.5f;
 
-        r32 inv_weight = win->top->vert_weight;
-        top_left.y += inv_weight*(bot_right.y-top_left.y) + WINDOW_MARGIN;
+        top_left.y = win->top->max.y + WINDOW_MARGIN;
     }
 
     if (win->bottom) {
@@ -158,6 +152,9 @@ void start_window(Ui *ui, Ui_Window *win)
     u32 flags[] = {FLAGS_MOUSE_WINDOW_BACKGROUND, FLAGS_DEPTH_0};
     draw_square(top_left, bot_right - top_left, flags);
     ui->drawing_win = win;
+
+    win->min = top_left;
+    win->max = bot_right;
 }
 
 //void end_window(Ui *ui)

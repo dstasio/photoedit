@@ -753,20 +753,9 @@ WinMain(
             context->VSSetShader(vshader, 0, 0);
             context->PSSetShader(pshader, 0, 0);
 
-            local_persist Ui_Window win[4] = {};
-            Ui_Window *TL = &win[0];
-            Ui_Window *TR = &win[1];
-            Ui_Window *BL = &win[2];
-            Ui_Window *BR = &win[3];
-            TL->right = TR;
-            TL->bottom = BL;
-            TR->bottom = BR;
-            BL->right = BR;
+            local_persist Ui_Window win = {};
 
-            start_window(&ui, &win[3]);
-            start_window(&ui, &win[0]);
-            start_window(&ui, &win[1]);
-            start_window(&ui, &win[2]);
+            start_window(&ui, &win);
 
             // @todo, @cleanup: move this elsewhere?
             //if (!ui.resize_win)
