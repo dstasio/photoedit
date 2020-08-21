@@ -1,5 +1,8 @@
 #if !defined(BASE_H)
+#include "headers.h"
+
 #define byte_offset(base, offset) ((u8*)(base) + (offset))
+#define offset_read(base, offset, type) *((type*)(byte_offset(base, offset)))
 
 struct Memory_Pool
 {
@@ -11,9 +14,10 @@ struct Memory_Pool
     u32 alloc_history_index;
 };
 
-#define push_struct(type) (type *)push_size_((&mempool), sizeof(type))
-#define push_array(length, type) (type *)push_size_((&mempool), (length)*sizeof(type))
-#define mempool_pop_last pop_size_((&mempool))
+#define push_struct(type)           (type *)push_size_((&mempool), sizeof(type))
+#define push_array(length, type)    (type *)push_size_((&mempool), (length)*sizeof(type))
+#define extend_array(array, length) extend_size_((&mempool), (array), (length)*sizeof(array[0]))
+#define pop_last                    pop_size_((&mempool))
 inline void *
 push_size_(Memory_Pool *pool, memory_index size)
 {
@@ -27,12 +31,21 @@ push_size_(Memory_Pool *pool, memory_index size)
     Assert(pool->alloc_history_index < 500);
     return(result);
 }
+// @todo: clear to zero
 inline void pop_size_(Memory_Pool *pool) { pool->used -= pool->alloc_history[pool->alloc_history_index--]; }
+inline b32 extend_size_(Memory_Pool *pool, void *pointer, memory_index size) 
+{
+    b32 result = ((pool->base + pool->used - pool->alloc_history[pool->alloc_history_index-1]) == pointer);
+    pool->used += size;
+    pool->alloc_history[pool->alloc_history_index-1] += size;
+    return result;
+}
 
 struct Image
 {
     u32 width;
     u32 height;
+    u32 depth;
     u32 n_channels;
     u8 *bytes;
 };

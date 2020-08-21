@@ -43,23 +43,6 @@ struct Ui
     Input *input;
 };
 
-// compares strings and returns 1 if equal, 0 if different
-b32 same_string(char *s1, char *s2)
-{
-    b32 result = 1;
-
-    if (!s1 || !s2)
-        result = 0;
-    else {
-        while (!((*s1 == '\0') && (*s2 == '\0')) && (result))
-        {
-            result = (*(s1++) == *(s2++));
-        }
-    }
-
-    return result;
-}
-
 u32 get_hash(char *s)
 {
     u32 hash = 0;

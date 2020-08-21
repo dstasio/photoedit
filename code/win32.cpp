@@ -15,7 +15,6 @@
 #include "datatypes.h"
 #include "phe_math.h"
 #include <stdio.h>
-#include "headers.h"
 
 #if PHE_INTERNAL
 #define output_string(s, ...)        {char Buffer[100];sprintf_s(Buffer, s, __VA_ARGS__);OutputDebugStringA(Buffer);}
@@ -23,12 +22,14 @@
 #define throw_error(e, ...)           output_string(" ------------------------------[ERROR] " ## e, __VA_ARGS__)
 #define inform(i, ...)                output_string(" ------------------------------[INFO] " ## i, __VA_ARGS__)
 #define warn(w, ...)                  output_string(" ------------------------------[WARNING] " ## w, __VA_ARGS__)
+#define print(p, ...)                 output_string(p, __VA_ARGS__)
 #else
 #define output_string(s, ...)
 #define throw_error_and_exit(e, ...)
 #define throw_error(e, ...)
 #define inform(i, ...)
 #define warn(w, ...)
+#define print(p, ...)
 #endif
 #define key_down(code, key)    {if(message.wParam == (code))  input.held.key = 1;}
 #define key_up(code, key)      {if(message.wParam == (code)) {input.held.key = 0;input.pressed.key = 1;}}
@@ -211,7 +212,11 @@ internal Platform_Texture
 win32_load_texture(char *path)
 {
     Platform_Texture result = {};
-    result.image = load_bitmap(path);
+    char *extension = get_extension(path);
+    if (same_string(extension, ".bmp"))
+        result.image = load_bitmap(path);
+    else if (same_string(extension, ".png"))
+        result.image = load_png(path);
     D3D11_TEXTURE2D_DESC tex_desc = {};
     tex_desc.Width              = result.image.width;
     tex_desc.Height             = result.image.height;
@@ -229,7 +234,7 @@ win32_load_texture(char *path)
     device->CreateShaderResourceView((ID3D11Resource *)result.handle, 0, (ID3D11ShaderResourceView **)&result.platform);
     context->UpdateSubresource((ID3D11Resource *)result.handle, 0, 0, result.image.bytes, result.image.width*4, 0);
     context->GenerateMips((ID3D11ShaderResourceView *)result.platform);
-    mempool_pop_last;
+    pop_last; // image.bytes
 
     return result;
 }
@@ -572,12 +577,12 @@ WinMain(
         // ===========================================================
         ID3D11SamplerState *sampler;
         D3D11_SAMPLER_DESC sampler_desc = {};
-        sampler_desc.Filter = D3D11_FILTER_ANISOTROPIC;//D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+        sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;//D3D11_FILTER_MIN_MAG_MIP_LINEAR;//D3D11_FILTER_ANISOTROPIC;
         sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_MIRROR;
         sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_MIRROR;
         sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_MIRROR;
         sampler_desc.MipLODBias = -1;
-        sampler_desc.MaxAnisotropy = 16;
+        sampler_desc.MaxAnisotropy = 0;
         sampler_desc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
         sampler_desc.MinLOD = 0;
         sampler_desc.MaxLOD = 100;
@@ -695,6 +700,12 @@ WinMain(
         context->VSSetConstantBuffers(1, 1, &global_flags_buff);  // @todo: make separate buffers for each shader
 
         Platform_Texture canvas_image = win32_load_texture("sampletexture.bmp");
+//        Platform_Texture canvas_image = win32_load_texture("8x8_rgba.bmp");
+        Platform_Texture png_image = win32_load_texture("8x8_rgba_uncompressed.png");
+//        load_png("test_compressed.png");
+//        load_png("test_uncompressed.png");
+//        load_png("onepixel_rgba.png");
+//        load_png("8x8_rgba_uncompressed.png");
 
         MSG message = {};
         Input input = {};
@@ -811,11 +822,9 @@ WinMain(
             // Canvas contents
             context->OMSetDepthStencilState(state_dgequal_sequal, 1);
 
-            set_active_texture(&canvas_image);
+            set_active_texture(&png_image);
             u32 flags[] = {FLAG_COLOR_TEXTURE, FLAG_DEPTH_1};
             draw_square({}, {(r32)canvas_image.image.width / (r32)canvas_image.image.height, (r32)canvas_image.image.height / (r32)canvas_image.image.height}, flags);
-
-
 
             swap_chain->Present(1, 0);
 

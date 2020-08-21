@@ -11,6 +11,7 @@ vmap gx <Plug>NetrwBrowseXVis
 nmap gx <Plug>NetrwBrowseX
 vnoremap <silent> <Plug>NetrwBrowseXVis :call netrw#BrowseXVis()
 nnoremap <silent> <Plug>NetrwBrowseX :call netrw#BrowseX(expand((exists("g:netrw_gx")? g:netrw_gx : '<cfile>')),netrw#CheckIfRemote())
+map <F8> :call CommentToggle()
 vmap <C-Del> "*d
 vmap <S-Del> "*d
 vmap <C-Insert> "*y
@@ -33,6 +34,7 @@ set autoindent
 set background=dark
 set cindent
 set cinoptions=l1,g0,N-s,E-s,t0,(0,w1,Ws,m1,=0
+set errorformat=%f(%l)\ :\ %t%*\\D%n:\ %m,%*[^\"]\"%f\"%*\\D%l:\ %m,%f(%l)\ :\ %m,%*[^\ ]\ %f\ %l:\ %m,%f:%l:%c:%m,%f(%l):%m,%f:%l:%m,%f|%l|\ %m,%f(%l\\,%c):\ %t%*\\D%n:\ %m
 set expandtab
 set guifont=Consolas:h11:cANSI
 set guioptions=egt
@@ -53,13 +55,16 @@ if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
   let s:wipebuf = bufnr('%')
 endif
 set shortmess=aoO
-badd +26 build.bat
+badd +1 ui.cpp
 badd +1 win32.cpp
-badd +37 ui.hlsl
-badd +24 phe_math.h
-badd +97 ui.cpp
-badd +1 base.cpp
+badd +1 ui.hlsl
+badd +1 build.bat
+badd +14 base.cpp
 badd +1 base.h
+badd +36 headers.h
+badd +1 datatypes.h
+badd +1 phe_math.h
+badd +1 intrinsics.h
 argglobal
 silent! argdel *
 edit win32.cpp
@@ -156,7 +161,8 @@ setlocal nopreserveindent
 setlocal nopreviewwindow
 setlocal quoteescape=\\
 setlocal noreadonly
-setlocal norelativenumber
+set relativenumber
+setlocal relativenumber
 setlocal norightleft
 setlocal rightleftcmd=search
 setlocal noscrollbind
@@ -192,11 +198,11 @@ set nowrap
 setlocal nowrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 176 - ((21 * winheight(0) + 26) / 53)
+let s:l = 656 - ((31 * winheight(0) + 26) / 53)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-176
+656
 normal! 09|
 wincmd w
 argglobal
@@ -282,7 +288,8 @@ setlocal nopreserveindent
 setlocal nopreviewwindow
 setlocal quoteescape=\\
 setlocal noreadonly
-setlocal norelativenumber
+set relativenumber
+setlocal relativenumber
 setlocal norightleft
 setlocal rightleftcmd=search
 setlocal noscrollbind
@@ -318,14 +325,13 @@ set nowrap
 setlocal nowrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 1 - ((0 * winheight(0) + 26) / 53)
+let s:l = 25 - ((24 * winheight(0) + 26) / 53)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-1
+25
 normal! 0
 wincmd w
-2wincmd w
 exe 'vert 1resize ' . ((&columns * 116 + 116) / 232)
 exe 'vert 2resize ' . ((&columns * 115 + 116) / 232)
 tabnext 1
