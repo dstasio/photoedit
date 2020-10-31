@@ -37,6 +37,7 @@ get_extension(char *path)
     return result;
 }
 
+#if 0
 inline u8
 png_paeth_(u32 a, u32 b, u32 c)
 {
@@ -51,6 +52,12 @@ png_paeth_(u32 a, u32 b, u32 c)
     else if (pb <= pc)
         result = (u8)b;
     return result;
+}
+
+inline void
+compute_huffman(u8 *code_lengths_table, u32 code_lengths_table_size, PNG_Huffman huffman)
+{
+
 }
 
 internal Image
@@ -133,7 +140,12 @@ load_png(char *path)
                         deflate_bfinal = *compressed & 0x1;
                         b32 deflate_btype  = (*compressed >> 1) & 0x3;
 
-                        if (deflate_btype == 0) { // no compression
+#define PNG_DEFLATE_BTYPE_NOCOMPRESSION  0b00
+#define PNG_DEFLATE_BTYPE_FIXEDHUFFMAN   0b01
+#define PNG_DEFLATE_BTYPE_DYNAMICHUFFMAN 0b10
+#define PNG_DEFLATE_BTYPE_ERROR          0b11
+                        if (deflate_btype == PNG_DEFLATE_BTYPE_NOCOMPRESSION)
+                        {
                             compressed++;
                             u16 *len  = (u16 *)(compressed);
                             compressed += 2;
@@ -141,13 +153,13 @@ load_png(char *path)
                             compressed += 2;
                             //                            byte_swap(len);
                             //                            byte_swap(nlen);
-                            if (!decompressed_start) {
+                            if (!decompressed_start)
+                            {
                                 decompressed = push_array(*len, u8);
                                 decompressed_start = decompressed;
                             }
-                            else {
+                            else
                                 AssertF(extend_array(decompressed_start, *len));
-                            }
                             *chunk_size -= 5;
 
                             while (*len > 0) {
@@ -176,9 +188,52 @@ load_png(char *path)
                                 }
                             }
                         }
-                        else if (deflate_btype != 3) {
+                        else if (deflate_btype != PNG_DEFLATE_BTYPE_ERROR)
+                        {
+                            if (deflate_btype == PNG_DEFLATE_BTYPE_DYNAMICHUFFMAN)
+                            {
+                                u32 HLIT  = *(compressed++) >> 3;  // 5 bits, note: first three bits are flags
+                                u32 HDIST = *compressed & 0x1F;    // 5 bits
+                                u32 HCLEN = (*(compressed++) >> 5) | ((*compressed & 0x1) << (3));  // 4 bits
+
+                                HLIT  += 257;
+                                HDIST += 1;
+                                HCLEN += 4;
+
+                                u32 HCLEN_order[] = {16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15};
+                                u8 code_length_sequence_table[array_length(HCLEN_order)] = {};
+                                u8 bits_consumed = 1;
+                                for (u32 i = 0; i < HCLEN; ++i)
+                                {
+                                    // @performance: make bit consumption more efficient
+                                    if (bits_consumed <= (8-3))
+                                    {
+                                        code_length_sequence_table[HCLEN_order[i]] = (*compressed >> bits_consumed) & 0b111;
+                                    }
+                                    else
+                                    {
+                                        if (bits_consumed == 6)
+                                            code_length_sequence_table[HCLEN_order[i]] = ((*compressed >> bits_consumed) & 0b11) | ((*(compressed+1) & 0b1) << 2);
+                                        else if (bits_consumed == 7)
+                                            code_length_sequence_table[HCLEN_order[i]] = ((*compressed >> bits_consumed) & 0b1) | ((*(compressed+1) & 0b11) << 1);
+                                        else Assert(0);
+                                    }
+                                    bits_consumed += 3;
+                                    if (bits_consumed >= 8)
+                                    {
+                                        bits_consumed -= 8;
+                                        compressed++;
+                                    }
+                                }
+                                Assert(0);
+                                PNG_Huffman huffman_0;
+                                compute_huffman(code_length_sequence_table, array_length(code_length_sequence_table), &huffman_0);
+                            }
+                            else
+                                Assert(0);
                         }
-                        else {
+                        else
+                        {
                             throw_error("'%s' is not a valid PNG file\n", path);
                             Assert(0);
                             // @todo: handle incorrect png
@@ -287,9 +342,13 @@ load_png(char *path)
         }
     }
 
+#undef PNG_DEFLATE_BTYPE_NOCOMPRESSION
+#undef PNG_DEFLATE_BTYPE_FIXEDHUFFMAN
+#undef PNG_DEFLATE_BTYPE_DYNAMICHUFFMAN
     pop_last; // decompressed_start
     return image;
 }
+#endif
 
 // @note: this function is only capable of reading Bitmaps with 3 bytes per pixel
 // @todo: add support for all possible cases

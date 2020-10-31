@@ -1,6 +1,8 @@
 #if !defined(BASE_H)
 #include "headers.h"
 
+#define array_length(x) (sizeof(x) / sizeof((x)[0]))
+
 #define byte_offset(base, offset) ((u8*)(base) + (offset))
 #define offset_read(base, offset, type) *((type*)(byte_offset(base, offset)))
 

@@ -216,7 +216,10 @@ win32_load_texture(char *path)
     if (same_string(extension, ".bmp"))
         result.image = load_bitmap(path);
     else if (same_string(extension, ".png"))
-        result.image = load_png(path);
+    {
+        Assert(0);
+//        result.image = load_png(path);
+    }
     D3D11_TEXTURE2D_DESC tex_desc = {};
     tex_desc.Width              = result.image.width;
     tex_desc.Height             = result.image.height;
@@ -701,11 +704,7 @@ WinMain(
 
         Platform_Texture canvas_image = win32_load_texture("sampletexture.bmp");
 //        Platform_Texture canvas_image = win32_load_texture("8x8_rgba.bmp");
-        Platform_Texture png_image = win32_load_texture("8x8_rgba_uncompressed.png");
-//        load_png("test_compressed.png");
-//        load_png("test_uncompressed.png");
-//        load_png("onepixel_rgba.png");
-//        load_png("8x8_rgba_uncompressed.png");
+//        Platform_Texture png_image = win32_load_texture("test.bmp");//win32_load_texture("8x8_rgba_compression1.png");
 
         MSG message = {};
         Input input = {};
@@ -822,7 +821,7 @@ WinMain(
             // Canvas contents
             context->OMSetDepthStencilState(state_dgequal_sequal, 1);
 
-            set_active_texture(&png_image);
+            set_active_texture(&canvas_image);
             u32 flags[] = {FLAG_COLOR_TEXTURE, FLAG_DEPTH_1};
             draw_square({}, {(r32)canvas_image.image.width / (r32)canvas_image.image.height, (r32)canvas_image.image.height / (r32)canvas_image.image.height}, flags);
 

@@ -1,5 +1,5 @@
 @echo off
-set CommonCompilerFlags=-MTd -nologo -Gm- -GR- -EHa- -Od -Oi -WX -W4 -wd4201 -wd4100 -wd4189 -wd4456 -wd4505 -DPHE_INTERNAL=1 -DPHE_DEBUG=1 -FAsc -Z7 /I ..\imgui
+set CommonCompilerFlags=-diagnostics:column -MTd -nologo -Gm- -GR- -EHa- -Od -Oi -WX -W4 -wd4201 -wd4100 -wd4189 -wd4456 -wd4505 -DPHE_INTERNAL=1 -DPHE_DEBUG=1 -FAsc -Z7 /I ..\imgui
 set CommonLinkerFlags=-incremental:no -opt:ref user32.lib gdi32.lib d3d11.lib
 
 IF NOT EXIST ..\build mkdir ..\build
