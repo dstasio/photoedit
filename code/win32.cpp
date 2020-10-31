@@ -703,6 +703,39 @@ WinMain(
         context->VSSetConstantBuffers(1, 1, &global_flags_buff);  // @todo: make separate buffers for each shader
 
         Platform_Texture canvas_image = win32_load_texture("sampletexture.bmp");
+        //u8* &img = canvas_image.image.bytes;
+        
+        const u8 whsize = 3;
+        float val = 1.f/(whsize*whsize);
+        float filter[whsize][whsize] = {val, val, val,
+                                    val, val, val,
+                                    val, val, val};
+        u32 wid = canvas_image.image.width;
+        u32 hei = canvas_image.image.height;
+
+        //Platform_Texture canvas = win32_load_texture("sampletexture.bmp");
+#define pixel_at(x,y,ch) (canvas_image.image.bytes)[(x)*4+(y)*4*wid+(ch)]
+
+        for(u32 i = 1; i < wid; i++) {
+            for(u32 j = 1; j < hei; j++) {
+                float rsum = 0;
+                float gsum = 0;
+                float bsum = 0;
+
+                gsum += (r32)pixel_at(i-1,j-1,1) * filter[0][0];
+                gsum += (r32)pixel_at(i-1,j  ,1) * filter[0][1];
+                gsum += (r32)pixel_at(i-1,j+1,1) * filter[0][2];
+                gsum += (r32)pixel_at(i  ,j-1,1) * filter[1][0];
+                gsum += (r32)pixel_at(i  ,j  ,1) * filter[1][1];
+                gsum += (r32)pixel_at(i  ,j+1,1) * filter[1][2];
+                gsum += (r32)pixel_at(i+1,j-1,1) * filter[2][0];
+                gsum += (r32)pixel_at(i+1,j  ,1) * filter[2][1];
+                gsum += (r32)pixel_at(i+1,j+1,1) * filter[2][2];
+                
+                pixel_at(i,j,0) = (u8)gsum;
+            }
+        }
+
 //        Platform_Texture canvas_image = win32_load_texture("8x8_rgba.bmp");
 //        Platform_Texture png_image = win32_load_texture("test.bmp");//win32_load_texture("8x8_rgba_compression1.png");
 

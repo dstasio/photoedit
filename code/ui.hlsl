@@ -69,6 +69,7 @@ float4 main(VS_OUTPUT input) : SV_TARGET
     }
     else if (mouse == FLAG_COLOR_TEXTURE) {
         color = image.Sample(texture_sampler_state, input.txc);
+        color = float4(color.rrr,1.f);
     }
     //color = float4(0.8*input.col, 1.f);
     //float4 output = color*font.Sample(texture_sampler_state, input.txc);
