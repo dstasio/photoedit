@@ -708,17 +708,17 @@ WinMain(
         
         r32 val = 1.f/81.f;
         r32 f1[] = {
-            val, val, val, val,  val,  val, val, val, val,
-            val, val, val, val,  val,  val, val, val, val,
-            val, val, val, val,  val,  val, val, val, val,
-            val, val, val, val,  val,  val, val, val, val,
+            val, val, val,   val,   val, val, val, val,
+            val, val, val,   val,   val, val, val, val,
+            val, val, val,   val,   val, val, val, val,
+            val, val, val,   val,   val, val, val, val,
 
-            val, val, val, val,  val,  val, val, val, val,
+            val, val, val,   val,   val, val, val, val,
 
-            val, val, val, val,  val,  val, val, val, val,
-            val, val, val, val,  val,  val, val, val, val,
-            val, val, val, val,  val,  val, val, val, val,
-            val, val, val, val,  val,  val, val, val, val,
+            val, val, val,   val,   val, val, val, val,
+            val, val, val,   val,   val, val, val, val,
+            val, val, val,   val,   val, val, val, val,
+            val, val, val,   val,   val, val, val, val,
         };
         i32 kernel_size = (i32)Sqrt((r32)array_length(f1));
 
@@ -727,6 +727,10 @@ WinMain(
 
         //Platform_Texture canvas = win32_load_texture("sampletexture.bmp");
 #define pixel_at(x,y,ch) ((canvas_image.image.bytes)[(x)*4+(y)*4*wid+(ch)])
+
+        i64 before_filter_counter = 0;
+        i64 after_filter_counter = 0;
+        AssertF(QueryPerformanceCounter((LARGE_INTEGER *)&before_filter_counter));
 
         i32 border = (kernel_size/2);
         for(i32 i = border; i < (i32)(wid-border); i++) {
@@ -746,6 +750,10 @@ WinMain(
                 pixel_at(i,j,0) = ((u8)gsum) % 256;
             }
         }
+        AssertF(QueryPerformanceCounter((LARGE_INTEGER *)&after_filter_counter));
+        r32 filterdtime = (r32)(after_filter_counter - before_filter_counter) / (r32)performance_counter_frequency;
+        inform("Filter Time: %f\n", filterdtime);
+
         r32 f2[3][3] = {
             1.f/9.f, 1.f/9.f, 1.f/9.f,
             1.f/9.f, 1.f/9.f, 1.f/9.f,
