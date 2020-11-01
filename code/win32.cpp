@@ -409,6 +409,7 @@ void draw_square(v2 pos, v2 size, u32 *flags)
 
         flags_map[0] = flags[0];
         flags_map[1] = flags[1];
+        flags_map[2] = flags[2];
 
         context->Unmap(global_flags_buff, 0);
     }
@@ -692,7 +693,7 @@ WinMain(
         device->CreateBuffer(&cbuffer_desc, 0, &global_matrix_buff);
         context->VSSetConstantBuffers(0, 1, &global_matrix_buff);
 
-        cbuffer_desc.ByteWidth = max(2*sizeof(u32), 16);
+        cbuffer_desc.ByteWidth = max(3*sizeof(u32), 16);
         cbuffer_desc.Usage = D3D11_USAGE_DYNAMIC;
         cbuffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
         cbuffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -705,11 +706,11 @@ WinMain(
         Platform_Texture canvas_image = win32_load_texture("sampletexture.bmp");
         //u8* &img = canvas_image.image.bytes;
         
-        const u8 whsize = 3;
-        float val = 1.f/(whsize*whsize);
-        float filter[whsize][whsize] = {val, val, val,
-                                    val, val, val,
-                                    val, val, val};
+        r32 f1[3][3] = {
+            0.f,  0.f, 0.f,
+            1.f, -2.f, 1.f,
+            0.f,  0.f, 0.f,
+        };
         u32 wid = canvas_image.image.width;
         u32 hei = canvas_image.image.height;
 
@@ -722,19 +723,44 @@ WinMain(
                 float gsum = 0;
                 float bsum = 0;
 
-                gsum += (r32)pixel_at(i-1,j-1,1) * filter[0][0];
-                gsum += (r32)pixel_at(i-1,j  ,1) * filter[0][1];
-                gsum += (r32)pixel_at(i-1,j+1,1) * filter[0][2];
-                gsum += (r32)pixel_at(i  ,j-1,1) * filter[1][0];
-                gsum += (r32)pixel_at(i  ,j  ,1) * filter[1][1];
-                gsum += (r32)pixel_at(i  ,j+1,1) * filter[1][2];
-                gsum += (r32)pixel_at(i+1,j-1,1) * filter[2][0];
-                gsum += (r32)pixel_at(i+1,j  ,1) * filter[2][1];
-                gsum += (r32)pixel_at(i+1,j+1,1) * filter[2][2];
+                gsum += (r32)pixel_at(i-1,j-1,1) * f1[0][0];
+                gsum += (r32)pixel_at(i-1,j  ,1) * f1[0][1];
+                gsum += (r32)pixel_at(i-1,j+1,1) * f1[0][2];
+                gsum += (r32)pixel_at(i  ,j-1,1) * f1[1][0];
+                gsum += (r32)pixel_at(i  ,j  ,1) * f1[1][1];
+                gsum += (r32)pixel_at(i  ,j+1,1) * f1[1][2];
+                gsum += (r32)pixel_at(i+1,j-1,1) * f1[2][0];
+                gsum += (r32)pixel_at(i+1,j  ,1) * f1[2][1];
+                gsum += (r32)pixel_at(i+1,j+1,1) * f1[2][2];
                 
-                pixel_at(i,j,0) = (u8)gsum;
+                pixel_at(i,j,0) = ((u8)gsum) % 256;
             }
         }
+        r32 f2[3][3] = {
+            -1.f, 2.f, -1.f,
+            -1.f, 2.f, -1.f,
+            -1.f, 2.f, -1.f,
+        };
+        for(u32 i = 1; i < wid; i++) {
+            for(u32 j = 1; j < hei; j++) {
+                float rsum = 0;
+                float gsum = 0;
+                float bsum = 0;
+
+                gsum += (r32)pixel_at(i-1,j-1,1) * f2[0][0];
+                gsum += (r32)pixel_at(i-1,j  ,1) * f2[0][1];
+                gsum += (r32)pixel_at(i-1,j+1,1) * f2[0][2];
+                gsum += (r32)pixel_at(i  ,j-1,1) * f2[1][0];
+                gsum += (r32)pixel_at(i  ,j  ,1) * f2[1][1];
+                gsum += (r32)pixel_at(i  ,j+1,1) * f2[1][2];
+                gsum += (r32)pixel_at(i+1,j-1,1) * f2[2][0];
+                gsum += (r32)pixel_at(i+1,j  ,1) * f2[2][1];
+                gsum += (r32)pixel_at(i+1,j+1,1) * f2[2][2];
+                
+                pixel_at(i,j,2) = (u8)gsum;
+            }
+        }
+        context->UpdateSubresource((ID3D11Resource *)canvas_image.handle, 0, 0, canvas_image.image.bytes, canvas_image.image.width*4, 0);
 
 //        Platform_Texture canvas_image = win32_load_texture("8x8_rgba.bmp");
 //        Platform_Texture png_image = win32_load_texture("test.bmp");//win32_load_texture("8x8_rgba_compression1.png");
@@ -748,6 +774,7 @@ WinMain(
         i64 last_performance_counter = 0;
         i64 current_performance_counter = 0;
         AssertF(QueryPerformanceCounter((LARGE_INTEGER *)&last_performance_counter));
+        u32 SWITCH = 0;
         while(global_running && !global_error)
         {
             AssertF(QueryPerformanceCounter((LARGE_INTEGER *)&current_performance_counter));
@@ -833,6 +860,11 @@ WinMain(
                 input.drag_delta = input.mouse - input.drag_start;
                 input.drag_start = input.mouse;
             }
+            if (input.pressed.space)
+            {
+                SWITCH = (SWITCH + 1) % 4;
+                inform("SWITCH: %d\n", SWITCH);
+            }
             local_persist Ui_Window win = {};
 
             r32 clear_color[] = hex_to_rgba(CLEAR_COLOR);
@@ -855,7 +887,7 @@ WinMain(
             context->OMSetDepthStencilState(state_dgequal_sequal, 1);
 
             set_active_texture(&canvas_image);
-            u32 flags[] = {FLAG_COLOR_TEXTURE, FLAG_DEPTH_1};
+            u32 flags[] = {FLAG_COLOR_TEXTURE, FLAG_DEPTH_1, SWITCH};
             draw_square({}, {(r32)canvas_image.image.width / (r32)canvas_image.image.height, (r32)canvas_image.image.height / (r32)canvas_image.image.height}, flags);
 
             swap_chain->Present(1, 0);

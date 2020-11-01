@@ -18,6 +18,7 @@ cbuffer flags
 {
     uint mouse;
     uint depth;
+    uint SWITCH;
 }
 
 struct VS_OUTPUT
@@ -69,7 +70,14 @@ float4 main(VS_OUTPUT input) : SV_TARGET
     }
     else if (mouse == FLAG_COLOR_TEXTURE) {
         color = image.Sample(texture_sampler_state, input.txc);
-        color = float4(color.rrr,1.f);
+        if (SWITCH == 0)
+            color = float4(color.rrr,1.f);
+        else if (SWITCH == 1)
+            color = float4(color.ggg,1.f);
+        else if (SWITCH == 2)
+            color = float4(color.bbb,1.f);
+        else if (SWITCH == 3)
+            color = float4(color.aaa,1.f);
     }
     //color = float4(0.8*input.col, 1.f);
     //float4 output = color*font.Sample(texture_sampler_state, input.txc);
