@@ -706,40 +706,50 @@ WinMain(
         Platform_Texture canvas_image = win32_load_texture("sampletexture.bmp");
         //u8* &img = canvas_image.image.bytes;
         
-        r32 f1[3][3] = {
-            0.f,  0.f, 0.f,
-            1.f, -2.f, 1.f,
-            0.f,  0.f, 0.f,
+        r32 val = 1.f/81.f;
+        r32 f1[] = {
+            val, val, val, val,  val,  val, val, val, val,
+            val, val, val, val,  val,  val, val, val, val,
+            val, val, val, val,  val,  val, val, val, val,
+            val, val, val, val,  val,  val, val, val, val,
+
+            val, val, val, val,  val,  val, val, val, val,
+
+            val, val, val, val,  val,  val, val, val, val,
+            val, val, val, val,  val,  val, val, val, val,
+            val, val, val, val,  val,  val, val, val, val,
+            val, val, val, val,  val,  val, val, val, val,
         };
+        i32 kernel_size = (i32)Sqrt((r32)array_length(f1));
+
         u32 wid = canvas_image.image.width;
         u32 hei = canvas_image.image.height;
 
         //Platform_Texture canvas = win32_load_texture("sampletexture.bmp");
-#define pixel_at(x,y,ch) (canvas_image.image.bytes)[(x)*4+(y)*4*wid+(ch)]
+#define pixel_at(x,y,ch) ((canvas_image.image.bytes)[(x)*4+(y)*4*wid+(ch)])
 
-        for(u32 i = 1; i < wid; i++) {
-            for(u32 j = 1; j < hei; j++) {
-                float rsum = 0;
-                float gsum = 0;
-                float bsum = 0;
+        i32 border = (kernel_size/2);
+        for(i32 i = border; i < (i32)(wid-border); i++) {
+            for(i32 j = border; j < (i32)(hei-border); j++) {
+                r32 rsum = 0;
+                r32 gsum = 0;
+                r32 bsum = 0;
 
-                gsum += (r32)pixel_at(i-1,j-1,1) * f1[0][0];
-                gsum += (r32)pixel_at(i-1,j  ,1) * f1[0][1];
-                gsum += (r32)pixel_at(i-1,j+1,1) * f1[0][2];
-                gsum += (r32)pixel_at(i  ,j-1,1) * f1[1][0];
-                gsum += (r32)pixel_at(i  ,j  ,1) * f1[1][1];
-                gsum += (r32)pixel_at(i  ,j+1,1) * f1[1][2];
-                gsum += (r32)pixel_at(i+1,j-1,1) * f1[2][0];
-                gsum += (r32)pixel_at(i+1,j  ,1) * f1[2][1];
-                gsum += (r32)pixel_at(i+1,j+1,1) * f1[2][2];
+                for (i32 ki = 0; ki < kernel_size; ++ki)
+                {
+                    for (i32 kj = 0; kj < kernel_size; ++kj)
+                    {
+                        gsum += (r32)pixel_at(i+ki-border,j+kj-border, 1) * f1[kj*kernel_size + kj];
+                    }
+                }
                 
                 pixel_at(i,j,0) = ((u8)gsum) % 256;
             }
         }
         r32 f2[3][3] = {
-            -1.f, 2.f, -1.f,
-            -1.f, 2.f, -1.f,
-            -1.f, 2.f, -1.f,
+            1.f/9.f, 1.f/9.f, 1.f/9.f,
+            1.f/9.f, 1.f/9.f, 1.f/9.f,
+            1.f/9.f, 1.f/9.f, 1.f/9.f,
         };
         for(u32 i = 1; i < wid; i++) {
             for(u32 j = 1; j < hei; j++) {
@@ -862,7 +872,7 @@ WinMain(
             }
             if (input.pressed.space)
             {
-                SWITCH = (SWITCH + 1) % 4;
+                SWITCH = (SWITCH + 1) % 3;
                 inform("SWITCH: %d\n", SWITCH);
             }
             local_persist Ui_Window win = {};
