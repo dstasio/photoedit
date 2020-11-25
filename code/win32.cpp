@@ -89,28 +89,6 @@ win32_get_last_write_time(char *Path)
     return result;
 }
 
-#define CURSOR_ARROW  0
-#define CURSOR_RESIZE 1
-inline void
-win32_debug_set_cursor(u32 id = CURSOR_ARROW)
-{
-    HCURSOR arrow = 0;
-    switch(id)
-    {
-        case CURSOR_ARROW:
-        {
-            arrow = LoadCursorA(0, IDC_ARROW);
-        } break;
-
-        case CURSOR_RESIZE:
-        {
-            arrow = LoadCursorA(0, IDC_SIZENWSE);
-        } break;
-    }
-    Assert(arrow);
-    SetCursor(arrow);
-}
-
 struct Input_File
 {
     char *path;
@@ -321,13 +299,22 @@ LRESULT CALLBACK window_proc(
             global_running = false;
         } break;
 
-        case WM_ACTIVATE:
-        case WM_MOUSEHOVER:
+        case WM_SETCURSOR:
         {
-            if (((w & 0xF) == WA_ACTIVE) || ((w & 0xF) == WA_CLICKACTIVE))
-            {
-                win32_debug_set_cursor();
-            }
+            WORD low = LOWORD(l);
+            if ((low == HTCLIENT) || (low == HTCAPTION) || (low == HTCLOSE) || (low == HTMAXBUTTON) || (low == HTMINBUTTON))
+                SetCursor(LoadCursor(0, IDC_ARROW));
+            else if ((low == HTRIGHT) || (low == HTLEFT))
+                SetCursor(LoadCursor(0, IDC_SIZEWE));
+            else if ((low == HTTOP) || (low == HTBOTTOM))
+                SetCursor(LoadCursor(0, IDC_SIZENS));
+            else if ((low == HTBOTTOMLEFT) || (low == HTTOPRIGHT))
+                SetCursor(LoadCursor(0, IDC_SIZENESW));
+            else if ((low == HTBOTTOMRIGHT) || (low == HTTOPLEFT))
+                SetCursor(LoadCursor(0, IDC_SIZENWSE));
+            else
+                result = 0;
+            // @todo: Make else a simple arrow
         } break;
 
         case WM_SIZE:
